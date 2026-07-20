@@ -1109,7 +1109,17 @@ const FormPengeluaran = ({
   return (
     <Dialog open={popOver} onOpenChange={setPopOver}>
       <DialogTitle hidden={true}>Title</DialogTitle>
-      <DialogContent className="flex h-full min-w-full flex-col overflow-hidden border border-border bg-background">
+      <DialogContent
+        // Saat dialog menutup, Radix secara default MENGEMBALIKAN fokus DOM ke
+        // elemen pemicu (tombol ADD/EDIT di toolbar). Itu terjadi setelah grid
+        // memanggil selectCell() pasca-simpan, sehingga baris memang ter-highlight
+        // benar tapi fokus keyboard mendarat di <button> -- panah atas/bawah jadi
+        // tidak menggerakkan grid. preventDefault() mematikan pengembalian fokus
+        // itu; yang mengklaim fokus berikutnya adalah focusSelectedCell() di
+        // GridPengeluaranHeader.
+        onCloseAutoFocus={(e) => e.preventDefault()}
+        className="flex h-full min-w-full flex-col overflow-hidden border border-border bg-background"
+      >
         <div className="flex items-center justify-between bg-background-form-header px-2 py-2">
           <h2 className="text-sm font-semibold">
             {mode === 'add'
@@ -1135,7 +1145,13 @@ const FormPengeluaran = ({
             <Form {...forms}>
               <form
                 ref={formRef}
-                onSubmit={onSubmit}
+                // `onSubmit` kini handler MENTAH dari grid, jadi pembungkusan
+                // handleSubmit dilakukan di sini. Submit native (mis. ENTER di
+                // sebuah field) diperlakukan sama dengan tombol SAVE:
+                // keepOpenModal = false, dialog menutup.
+                onSubmit={forms.handleSubmit((values: any) =>
+                  onSubmit(values, false)
+                )}
                 className="flex h-full flex-col gap-6"
               >
                 <div className="flex h-[100%] flex-col gap-2 lg:gap-3">

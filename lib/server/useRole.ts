@@ -41,6 +41,17 @@ export const useCreateRole = () => {
   const { toast } = useToast();
   const { alert } = useAlert();
 
+  // invalidateQueries WAJIB tetap ada di GridRole — berbeda dengan
+  // useCreateAlatbayar yang justru harus membuangnya. Alasannya arsitektur
+  // grid-nya beda: `rows` di GridRole digerakkan effect react-query
+  // (`if (!role || isDataUpdated) return; ... return newRows`) yang MENIMPA
+  // rows setiap kali `role` / currentPage / isDataUpdated berubah. Tanpa
+  // invalidate, refetch tak pernah terjadi sehingga effect itu menimpa balik
+  // data hasil redis dengan data BASI -> baris yang baru disimpan hilang dari
+  // grid. Alatbayar aman membuangnya karena rows-nya berasal dari
+  // pageDataCache + Row Combiner (cache lokal yang otoritatif), bukan dari
+  // query. Fokus baris tersimpan di GridRole ditangani pendingFocusIdRef yang
+  // di-re-assert setelah rows berubah.
   return useMutation(storeRoleFn, {
     onSuccess: () => {
       void queryClient.invalidateQueries('roles');
@@ -67,6 +78,8 @@ export const useUpdateRole = () => {
   const { toast } = useToast();
   const { alert } = useAlert();
 
+  // Sama seperti useCreateRole: invalidate WAJIB dipertahankan (lihat alasannya
+  // di sana), fokus baris ditangani pendingFocusIdRef di GridRole.
   return useMutation(updateRoleFn, {
     onSuccess: () => {
       void queryClient.invalidateQueries('roles');

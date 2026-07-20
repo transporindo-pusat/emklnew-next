@@ -135,17 +135,23 @@ const GridRole = () => {
     x: number;
     y: number;
   } | null>(null);
-  const [viewMode, setViewMode] = useState<boolean>(false);
-  const [editMode, setEditMode] = useState<boolean>(false);
+  // Satu state `mode` menggantikan 4 flag boolean (viewMode/editMode/addMode/
+  // deleteMode) agar seragam dengan GridAlatbayar. Selain menghilangkan
+  // kombinasi mustahil (dulu handleView terpaksa menyalakan deleteMode=true
+  // supaya form read-only), ini juga membuat label tombol footer benar:
+  // FormFooterButtons memilih "DELETE" dari `mode === 'delete'`.
+  type RoleFormMode = '' | 'add' | 'edit' | 'delete' | 'view';
+  const [mode, setMode] = useState<RoleFormMode>('');
   const [totalPages, setTotalPages] = useState(1);
   const [fetchedPages, setFetchedPages] = useState<Set<number>>(new Set([1]));
-  const [addMode, setAddMode] = useState<boolean>(false);
+  // Dinaikkan setiap "Save & Add" untuk me-remount form agar LookUp re-init
+  // dari nilai hasil resetAddForm -> STATUS AKTIF kembali ke "AKTIF".
+  const [addFormKey, setAddFormKey] = useState<number>(0);
   const [isDataUpdated, setIsDataUpdated] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [inputValue, setInputValue] = useState<string>('');
   const [rows, setRows] = useState<Row[]>([]);
-  const [deleteMode, setDeleteMode] = useState<boolean>(false);
   const dispatch = useDispatch();
   const [checkedRows, setCheckedRows] = useState<Set<string>>(new Set());
   const [isAllSelected, setIsAllSelected] = useState(false);
@@ -179,7 +185,11 @@ const GridRole = () => {
   };
   const defaultValues = {
     rolename: '',
-    statusaktif: ''
+    statusaktif: '',
+    // Teks yang ditampilkan LookUp STATUS AKTIF. Wajib ada di defaultValues,
+    // kalau tidak forms.reset() meninggalkannya undefined dan LookUp tampil
+    // kosong walau id-nya sudah benar.
+    statusaktif_text: ''
   };
   const forms = useForm<RoleInput>({
     resolver: zodResolver(roleSchema),
@@ -891,26 +901,123 @@ const GridRole = () => {
     }
   }
 
-  const onSuccess = async (indexOnPage: any, pageNumber: any) => {
-    try {
-      forms.reset();
-      setPopOver(false);
-      setIsFetchingManually(true);
-      if (!deleteMode) {
-        const response = await api2.get(`/redis/get/role-allItems`);
+  // Id baris yang harus difokuskan setelah simpan. Fokus di grid ini TIDAK bisa
+  // diselesaikan sekali jalan di onSuccess: invalidateQueries memicu refetch,
+  // lalu effect data me-return newRows dan MENIMPA rows -- urutannya bisa
+  // berbeda dari data redis sehingga index hasil onSuccess meleset. Ref ini
+  // dibaca ulang setiap `rows` berubah sampai baris-nya ketemu.
+  const pendingFocusIdRef = useRef<string | null>(null);
 
-        if (JSON.stringify(response.data) !== JSON.stringify(rows)) {
-          setRows(response.data);
+  // Cache default STATUS AKTIF ("AKTIF") supaya tidak fetch berulang.
+  const statusAktifDefaultRef = useRef<{ id: string; text: string } | null>(
+    null
+  );
+
+  // Reset form mode "add" sekaligus set default STATUS AKTIF = "AKTIF".
+  // LookUp tidak punya auto-default untuk field ini, jadi di-set eksplisit dari
+  // tabel parameter (grp='status aktif'). `statusaktif` menyimpan id (varchar
+  // "02-DBCF9E01-...", bukan angka) dan `statusaktif_text` teks tampilannya.
+  const resetAddForm = async () => {
+    let aktif = statusAktifDefaultRef.current;
+    if (!aktif) {
+      try {
+        const res = await api2.get('/parameter', {
+          params: { grp: 'status aktif' }
+        });
+        const params: any[] = res?.data?.data ?? res?.data ?? [];
+        const row =
+          params.find((p) => p?.default === 'YA') ??
+          params.find((p) => String(p?.text).toUpperCase() === 'AKTIF');
+        aktif = row
+          ? { id: String(row.id), text: row.text ?? 'AKTIF' }
+          : { id: '', text: '' };
+        statusAktifDefaultRef.current = aktif;
+      } catch (e) {
+        console.error('Gagal mengambil default STATUS AKTIF:', e);
+        aktif = { id: '', text: '' };
+      }
+    }
+    forms.reset({
+      rolename: '',
+      statusaktif: aktif.id,
+      statusaktif_text: aktif.text
+    });
+  };
+
+  // Isi form dari satu baris grid. Dipanggil eksplisit SEBELUM modal edit/view/
+  // delete dibuka: LookUp membaca inputLookupValue/lookupNama lewat getValues()
+  // sekali saat mount, sedangkan effect pengisi baru jalan SETELAH render --
+  // kalau hanya mengandalkan effect, LookUp terlanjur mount dengan nilai kosong.
+  const fillFormFromRow = (rowData: any) => {
+    if (!rowData) return;
+    forms.setValue('rolename', rowData.rolename);
+    forms.setValue('statusaktif', rowData.statusaktif || '');
+    forms.setValue('statusaktif_text', rowData.text ?? '');
+  };
+
+  const onSuccess = async (
+    indexOnPage: any,
+    pageNumber: any,
+    keepOpenModal = false,
+    focusId: string | null = null
+  ) => {
+    try {
+      setIsFetchingManually(true);
+      // Tandai baris tersimpan; effect di bawah yang memfokuskannya begitu rows
+      // final (termasuk setelah refetch akibat invalidateQueries) tersedia.
+      pendingFocusIdRef.current = focusId ?? null;
+      if (focusId != null) {
+        // Batas jendela settle: setelah ini fokus tidak lagi di-assert ulang,
+        // supaya navigasi manual user (klik/panah) tidak ditarik balik. Dicek
+        // dulu masih id yang sama agar tidak menghapus fokus milik simpan lain.
+        setTimeout(() => {
+          if (String(pendingFocusIdRef.current) === String(focusId)) {
+            pendingFocusIdRef.current = null;
+          }
+        }, 1200);
+      }
+      if (keepOpenModal) {
+        // SAVE & ADD: form kembali ke default (STATUS AKTIF = "AKTIF") lalu
+        // remount modal via addFormKey supaya LookUp membaca nilai yang baru.
+        await resetAddForm();
+        setAddFormKey((k) => k + 1);
+        setPopOver(true);
+      } else {
+        forms.reset();
+        setPopOver(false);
+      }
+      if (mode !== 'delete') {
+        const response = await api2.get(`/redis/get/role-allItems`);
+        const loadedRows: Row[] = Array.isArray(response.data)
+          ? response.data
+          : [];
+
+        if (JSON.stringify(loadedRows) !== JSON.stringify(rows)) {
+          // Pakai loadedRows (dijamin array), BUKAN response.data mentah:
+          // /redis/get/:key membalas HTTP 200 dengan body { error: 'Key not
+          // found' } saat key tidak ada, dan menaruh objek itu ke state `rows`
+          // membuat grid kosong tanpa error apa pun.
+          setRows(loadedRows);
           setIsDataUpdated(true);
           setCurrentPage(pageNumber);
           setFetchedPages(new Set([pageNumber]));
-          setSelectedRow(indexOnPage);
-          setTimeout(() => {
-            gridRef?.current?.selectCell({
-              rowIdx: indexOnPage,
-              idx: 1
-            });
-          }, 150);
+
+          // Fokus by-id ditangani SEPENUHNYA oleh effect [rows] di atas, yang
+          // menghitung ulang index pada setiap versi rows (redis lalu refetch).
+          // Di sini cukup fallback by-index untuk kasus focusId tidak ada
+          // (mis. backend tak mengembalikan newItem). Kalau fallback ini ikut
+          // jalan saat focusId ada, selectCell-nya (150ms) mendarat setelah
+          // fokus by-id (50ms) memakai index dari dataset redis yang panjangnya
+          // beda dengan hasil refetch -> fokus meleset.
+          if (focusId == null) {
+            setSelectedRow(indexOnPage);
+            setTimeout(() => {
+              gridRef?.current?.selectCell({
+                rowIdx: indexOnPage,
+                idx: 1
+              });
+            }, 150);
+          }
         }
       }
       setIsFetchingManually(false);
@@ -921,9 +1028,26 @@ const GridRole = () => {
       setIsDataUpdated(false);
     }
   };
-  const onSubmit = async (values: RoleInput) => {
+  const onSubmit = async (
+    values: RoleInput,
+    keepOpenModalArg: unknown = false
+  ) => {
+    // react-hook-form memanggil callback-nya dengan (values, event). Kalau form
+    // di-submit natively (ENTER di sebuah field), argumen kedua adalah objek
+    // EVENT yang truthy -- bukan boolean. Tanpa penyempitan ke `=== true`,
+    // Enter akan diperlakukan seperti "SAVE & ADD" dan modal tidak pernah
+    // menutup. Hanya tombol SAVE & ADD yang boleh mengirim true.
+    const keepOpenModal = keepOpenModalArg === true;
+    // `statusaktif_text` HANYA teks tampilan LookUp, bukan kolom tabel `role`.
+    // role.service.ts create() meneruskan seluruh field sisa langsung ke
+    // .insert(), jadi mengirimnya menghasilkan:
+    //   column "statusaktif_text" of relation "role" does not exist
+    // (update() di service itu sudah membuangnya secara eksplisit, create belum;
+    // alatbayar aman karena memakai buildInsertData yang memilih kolom).
+    // Dibuang di sini supaya payload hanya berisi kolom nyata.
+    const { statusaktif_text: _statusaktifText, ...payload } = values;
     const selectedRowId = rows[selectedRow]?.id;
-    if (deleteMode === true && editMode === false) {
+    if (mode === 'delete') {
       await deleteRole(selectedRowId as unknown as string, {
         onSuccess: () => {
           setPopOver(false); // Close popover
@@ -944,38 +1068,53 @@ const GridRole = () => {
       });
       return; // Pastikan untuk keluar setelah delete
     }
-    if (editMode === false && deleteMode === false) {
-      const newOrder = createRole(
+    if (mode === 'add') {
+      await createRole(
         {
-          ...values,
+          ...payload,
           ...filters // Kirim filter ke body/payload
         },
         {
-          onSuccess: (data) => onSuccess(data.itemIndex, data.pageNumber)
+          // Backend role mengembalikan `newItem` baik untuk create MAUPUN
+          // update (lihat role.service.ts), jadi keduanya memakai kunci sama.
+          onSuccess: (data) =>
+            onSuccess(
+              data.itemIndex,
+              data.pageNumber,
+              keepOpenModal,
+              data.newItem?.id ?? null
+            )
         }
       );
-      if (newOrder !== undefined && newOrder !== null) {
-      }
       return;
     }
 
-    if (selectedRowId && deleteMode === false) {
+    if (selectedRowId && mode === 'edit') {
       await updateRole(
         {
           id: selectedRowId as unknown as string,
-          fields: { ...values, ...filters }
+          fields: { ...payload, ...filters }
         },
-        { onSuccess: (data) => onSuccess(data.itemIndex, data.pageNumber) }
+        {
+          onSuccess: (data) =>
+            onSuccess(
+              data.itemIndex,
+              data.pageNumber,
+              false,
+              data.newItem?.id ?? null
+            )
+        }
       );
     }
   };
 
+  // Isi form SEBELUM setPopOver(true) pada edit/view/delete (lihat
+  // fillFormFromRow), supaya LookUp sudah melihat nilainya saat mount.
   const handleEdit = () => {
     if (selectedRow !== null) {
+      fillFormFromRow(rows[selectedRow]);
+      setMode('edit');
       setPopOver(true);
-      setDeleteMode(false);
-      setEditMode(true);
-      setAddMode(false);
     }
   };
 
@@ -991,10 +1130,9 @@ const GridRole = () => {
             submitText: 'ok'
           });
         } else {
-          setAddMode(false);
+          fillFormFromRow(rowData);
+          setMode('delete');
           setPopOver(true);
-          setEditMode(false);
-          setDeleteMode(true);
         }
       }
     } catch (error) {}
@@ -1100,20 +1238,17 @@ const GridRole = () => {
 
   const handleView = () => {
     if (selectedRow !== null) {
-      const rowData = rows[selectedRow];
-      forms.setValue('rolename', rowData.rolename);
-      forms.setValue('statusaktif', rowData.statusaktif || '');
+      // Dulu view terpaksa menyalakan deleteMode=true agar form read-only.
+      // Dengan `mode` string, FormRole menentukan read-only dari mode itu
+      // sendiri sehingga tidak ada lagi kombinasi mustahil view+delete.
+      fillFormFromRow(rows[selectedRow]);
+      setMode('view');
       setPopOver(true);
-      setDeleteMode(true);
-      setEditMode(false);
-      setViewMode(true);
     }
   };
   const handleClose = () => {
     setPopOver(false);
-    setEditMode(false);
-    setViewMode(false);
-    setDeleteMode(false);
+    setMode('');
     forms.reset();
   };
   function getRowClass(row: Row) {
@@ -1125,12 +1260,17 @@ const GridRole = () => {
     return row.id;
   }
 
-  const handleAdd = () => {
-    forms.reset(defaultValues); // Nilai form akan kembali ke defaultValues secara otomatis
-    setPopOver(true);
-    setAddMode(true);
-    setEditMode(false);
-    setDeleteMode(false);
+  const handleAdd = async () => {
+    try {
+      setMode('add');
+      // Ambil default AKTIF lalu reset SEBELUM modal dibuka: LookUp membaca
+      // inputLookupValue/lookupNama lewat getValues() sekali saat mount, jadi
+      // nilainya harus sudah ada sebelum Dialog dirender.
+      await resetAddForm();
+      setPopOver(true);
+    } catch (error) {
+      console.error('Error add role:', error);
+    }
   };
 
   const handleClickOutside = (event: MouseEvent) => {
@@ -1201,23 +1341,46 @@ const GridRole = () => {
       rows.length > 0 &&
       selectedRow >= 0 && // Pastikan selectedRow adalah indeks yang valid
       selectedRow < rows.length && // Pastikan selectedRow berada dalam rentang indeks yang valid
-      addMode === false // Only fill the form if not in addMode
+      mode !== 'add'
     ) {
-      const rowData = rows[selectedRow];
-      forms.setValue('rolename', rowData.rolename);
-      forms.setValue('statusaktif', rowData.statusaktif || '');
-      forms.setValue('statusaktif_text', rowData.text);
-    } else if (addMode === true) {
-      // If in addMode, ensure the form values are cleared
-      forms.reset(); // Reset the form to keep it empty when in add mode
+      fillFormFromRow(rows[selectedRow]);
     }
-  }, [forms, selectedRow, rows, addMode, editMode, deleteMode, viewMode]);
+    // JANGAN forms.reset() saat mode 'add' di sini. Effect ini ikut ter-trigger
+    // setiap kali `rows` di-update (mis. refetch background) selama modal Add
+    // terbuka, sehingga me-reset nilai yang sudah diisi user KE kosong --
+    // termasuk menghapus STATUS AKTIF = "AKTIF" hasil resetAddForm(). Karena
+    // `statusaktif` wajib (z.string().min(1)), akibatnya validasi gagal dan SAVE
+    // seolah "tidak terjadi apa-apa". Reset add-mode ditangani handleAdd()/
+    // onSuccess() lewat resetAddForm().
+  }, [forms, selectedRow, rows, mode]);
   useEffect(() => {
     if (rows.length > 0 && selectedRow !== null) {
       const selectedRowData = rows[selectedRow];
       dispatch(setRoleacl(selectedRowData as unknown as IRole)); // Pastikan data sudah benar
     }
   }, [rows, selectedRow, dispatch]);
+
+  // Fokus baris yang baru disimpan BERDASARKAN ID. Dijalankan tiap `rows`
+  // berubah supaya tetap benar setelah effect data menimpa rows dengan hasil
+  // refetch. Ref dibersihkan begitu barisnya ketemu, jadi navigasi normal
+  // (klik/panah) tidak terganggu.
+  useEffect(() => {
+    const fid = pendingFocusIdRef.current;
+    if (!fid || rows.length === 0) return;
+    const idx = rows.findIndex((r) => String(r.id) === String(fid));
+    if (idx < 0) return;
+    // JANGAN bersihkan ref di sini. `rows` berubah DUA kali setelah simpan:
+    // pertama dari data redis (slice(0, pageNumber*limit) = semua item sampai
+    // halaman baris baru), lalu dari refetch invalidateQueries (hanya 20 item
+    // halaman currentPage). Kedua dataset itu beda panjang/offset, jadi index
+    // hasil pass pertama meleset begitu pass kedua mendarat. Ref sengaja
+    // dibiarkan hidup selama jendela settle agar SETIAP perubahan rows
+    // memfokuskan ulang by-id; pembersihannya lewat timeout di onSuccess.
+    setSelectedRow(idx);
+    setTimeout(() => {
+      gridRef?.current?.selectCell({ rowIdx: idx, idx: 1 });
+    }, 50);
+  }, [rows]);
 
   useEffect(() => {
     if (!role || isDataUpdated) return;
@@ -1469,14 +1632,21 @@ const GridRole = () => {
         </div>
       </div>
       <FormRole
+        key={addFormKey}
         popOver={popOver}
         setPopOver={setPopOver}
         forms={forms}
         handleClose={handleClose}
-        onSubmit={forms.handleSubmit(onSubmit)}
+        // Pola GridAlatbayar: grid yang membungkus handleSubmit SEKALI sambil
+        // meneruskan keepOpenModal secara eksplisit. FormRole cukup memanggil
+        // onSubmit(false)/onSubmit(true). Ini menghindari double-wrap (yang
+        // membuat objek `values` bocor ke slot keepOpenModal sehingga modal tak
+        // pernah menutup) tanpa bergantung pada perilaku internal RHF.
+        onSubmit={(keepOpenModal: boolean) =>
+          forms.handleSubmit((values) => onSubmit(values, keepOpenModal))()
+        }
         isLoadingDelete={isLoadingDelete}
-        deleteMode={deleteMode}
-        viewMode={viewMode}
+        mode={mode}
         isLoadingCreate={isLoadingCreate}
         isLoadingUpdate={isLoadingUpdate}
       />

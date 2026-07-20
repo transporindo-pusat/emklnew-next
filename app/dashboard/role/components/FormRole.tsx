@@ -27,13 +27,15 @@ const FormRole = ({
   setPopOver,
   forms,
   onSubmit,
-  deleteMode,
+  mode,
   isLoadingDelete,
   handleClose,
-  viewMode,
   isLoadingCreate,
   isLoadingUpdate
 }: any) => {
+  // Read-only untuk mode yang tidak boleh mengubah data. Dulu view dipaksa
+  // lewat prop `deleteMode`; kini keduanya dibaca dari satu `mode`.
+  const isReadOnly = mode === 'delete' || mode === 'view';
   interface FieldLengthDetails {
     column: string;
     length: number;
@@ -208,7 +210,13 @@ const FormRole = ({
             <Form {...forms}>
               <form
                 ref={formRef}
-                onSubmit={onSubmit}
+                // Submit native (ENTER di suatu field) diperlakukan sama dengan
+                // tombol SAVE: preventDefault lalu onSubmit(false) supaya objek
+                // event tidak pernah bocor ke slot keepOpenModal.
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  onSubmit(false);
+                }}
                 className="flex h-full flex-col gap-6"
               >
                 <div className="flex-grow">
@@ -230,7 +238,7 @@ const FormRole = ({
                                 {...field}
                                 value={(field.value as string) ?? ''}
                                 type="text"
-                                readOnly={deleteMode}
+                                readOnly={isReadOnly}
                               />
                             </FormControl>
                             <FormMessage />
@@ -267,10 +275,16 @@ const FormRole = ({
           </div>
         </div>
         <FormFooterButtons
-          mode={deleteMode ? 'delete' : viewMode ? 'view' : 'edit'}
-          onSave={onSubmit}
+          // `mode` diteruskan apa adanya: FormFooterButtons memakai ini untuk
+          // label tombol ("DELETE" saat mode delete) dan untuk memunculkan
+          // SAVE & ADD yang hanya tampil saat mode 'add'.
+          mode={mode}
+          onSave={() => onSubmit(false)}
+          onSaveAndAdd={() => onSubmit(true)}
           onCancel={handleClose}
-          hideSaveAndAdd
+          isLoadingCreate={isLoadingCreate}
+          isLoadingUpdate={isLoadingUpdate}
+          isLoadingDelete={isLoadingDelete}
         />
       </DialogContent>
     </Dialog>
