@@ -19,7 +19,6 @@ import { ImSpinner2 } from 'react-icons/im';
 import ActionButton from '@/components/custom-ui/ActionButton';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useQueryClient } from 'react-query';
 import { MenuInput, menuSchema } from '@/lib/validations/menu.validation';
 import { useDeleteMenu, useUpdateMenu } from '@/lib/server/useMenu';
 import { syncAcosFn } from '@/lib/apis/acos.api';
@@ -164,7 +163,6 @@ const GridPengeluaranHeader = () => {
     y: number;
   } | null>(null);
   const [fetchedPages, setFetchedPages] = useState<Set<number>>(new Set([1]));
-  const queryClient = useQueryClient();
   const [isFetchingManually, setIsFetchingManually] = useState(false);
   const [submitSuccessful, setSubmitSuccessful] = useState(false);
   const [rows, setRows] = useState<PengeluaranHeader[]>([]);
@@ -206,6 +204,47 @@ const GridPengeluaranHeader = () => {
   const ROW_HEIGHT = 27;
   const jumpToFirstRef = useRef(false);
   const jumpToLastRef = useRef(false);
+  // Id baris yang harus difokuskan Row Combiner setelah window settle pasca
+  // simpan. Fokus by-id lebih andal daripada selectCell by-index: index bisa
+  // meleset karena window pagination ikut bergeser saat re-render. Selama ref
+  // ini ter-set, Combiner TIDAK menjalankan cabang else (scroll ke row 0).
+  const pendingFocusIdRef = useRef<string | null>(null);
+  // Diset true selama window settle pasca-mutasi (add/edit) untuk memblokir
+  // kedua data-effect memproses ulang hasil refetch — yang kalau tidak diblokir
+  // menimpa fokus ke baris 1. Ref (bukan state) supaya resetnya tidak memicu
+  // effect lagi. Pola ini disalin dari GridAlatbayar.
+  const suppressRefetchRef = useRef(false);
+  // react-data-grid menandai sel yang sedang terpilih dengan tabindex=0 (sel lain
+  // -1). `selectCell()` sudah menetapkan sel terpilih -- highlight baris benar --
+  // tapi fokus DOM-nya belum tentu ikut: saat form ditutup pasca-simpan, Radix
+  // Dialog mengembalikan fokus ke tombol pemicu dan menimpa fokus sel. Karena
+  // onCloseAutoFocus di FormPengeluaran kini mematikan pengembalian itu, fokus
+  // tertinggal di <body>, jadi grid harus mengklaimnya sendiri di sini.
+  const focusSelectedCell = () => {
+    const active = document.activeElement as HTMLElement | null;
+    // Jangan rebut fokus kalau user sudah sengaja pindah ke input (mis. kolom
+    // filter atau search) selama jendela settle pasca-simpan.
+    if (
+      active &&
+      (active.tagName === 'INPUT' ||
+        active.tagName === 'TEXTAREA' ||
+        active.isContentEditable)
+    ) {
+      return;
+    }
+    const cell = document.querySelector<HTMLElement>(
+      '.rdg [role="gridcell"][tabindex="0"]'
+    );
+    cell?.focus({ preventScroll: true });
+  };
+  // ⚠️ DIAGNOSTIK SEMENTARA — hapus setelah bug fokus pasca-save selesai.
+  // Filter console dengan "[FOKUS]" untuk melihat seluruh rantainya.
+  const dbg = (...a: any[]) => console.log('[FOKUS]', ...a);
+  const dbgActive = (tag: string) =>
+    setTimeout(() => {
+      const el = document.activeElement as HTMLElement | null;
+      dbg(`activeElement@${tag}:`, el?.tagName, el?.className?.slice?.(0, 60));
+    }, 0);
   // Index display kolom yang akan di-focus setelah re-fetch (sort/filter).
   // Default 1 = lewati kolom 'nomor' (idx 0).
   const pendingSelectIdxRef = useRef<number>(1);
@@ -2135,11 +2174,28 @@ const GridPengeluaranHeader = () => {
     fetchedPages: number[],
     pagedData: Record<string, PengeluaranHeader[]>,
     pageNumber: number,
-    keepOpenModal = false
+    keepOpenModal = false,
+    focusId: string | null = null
   ) => {
     dispatch(setClearLookup(true));
     clearError();
     setIsFetchingManually(true);
+    dbg('1) onSuccess masuk', {
+      mode,
+      keepOpenModal,
+      dialogTetapTerbuka: keepOpenModal,
+      focusId,
+      indexOnPage,
+      pageNumber,
+      fetchedPages,
+      pagedDataKeys: Object.keys(pagedData ?? {}),
+      pagedDataCounts: Object.entries(pagedData ?? {}).map(
+        ([k, v]) => `${k}:${(v as any[])?.length}`
+      )
+    });
+    // Tandai baris yang baru disimpan agar Row Combiner memfokuskannya by-id
+    // setelah data window settle (lihat pendingFocusIdRef).
+    pendingFocusIdRef.current = focusId ?? null;
     try {
       if (keepOpenModal) {
         forms.reset();
@@ -2149,6 +2205,10 @@ const GridPengeluaranHeader = () => {
         setPopOver(false);
       }
       if (mode !== 'delete') {
+        // Blokir kedua data-effect memproses ulang hasil refetch pasca-simpan
+        // selama window settle, agar fokus by-id tidak tertimpa. Dibuka lagi
+        // via setTimeout di bawah.
+        suppressRefetchRef.current = true;
         const response = await api2.get(
           `/redis/get/pengeluaranheader-page-${pageNumber}`
         );
@@ -2156,7 +2216,32 @@ const GridPengeluaranHeader = () => {
         setRows(response.data);
         setIsDataUpdated(true);
         setVisiblePages(fetchedPages);
-        setSelectedRow(indexOnPage);
+
+        // Fokus BERDASARKAN ID baris, bukan indexOnPage hitungan backend.
+        // Setelah edit, urutan baris di window yang dimuat bisa berbeda dari
+        // hitungan index backend (mis. tie-break sort) sehingga fokus meleset.
+        // Cari index-nya langsung di data yang dimuat -> selalu tepat; fallback
+        // ke indexOnPage bila id tak ketemu. Sama seperti GridAlatbayar.
+        const loadedRows: PengeluaranHeader[] = Array.isArray(response.data)
+          ? response.data
+          : [];
+        const focusIdx =
+          focusId != null
+            ? loadedRows.findIndex((r) => String(r.id) === String(focusId))
+            : -1;
+        const targetIndex = focusIdx >= 0 ? focusIdx : indexOnPage;
+        dbg('2) hasil GET redis', {
+          isArray: Array.isArray(response.data),
+          len: Array.isArray(response.data) ? response.data.length : null,
+          rawJikaBukanArray: Array.isArray(response.data)
+            ? undefined
+            : response.data,
+          focusIdx,
+          targetIndex,
+          idBarisTermuat: loadedRows.slice(0, 5).map((r) => r.id)
+        });
+
+        setSelectedRow(targetIndex);
         setPageDataCache(
           new Map(
             Object.entries(pagedData).map(([key, value]) => [
@@ -2175,23 +2260,73 @@ const GridPengeluaranHeader = () => {
 
         setTimeout(() => {
           gridRef?.current?.selectCell({
-            rowIdx: indexOnPage,
+            rowIdx: targetIndex,
             idx: 1
           });
+          focusSelectedCell();
         }, 200);
+
+        // Penahan fokus pasca-simpan. setCurrentPage(pageNumber) memicu refetch
+        // yang menjalankan Row Combiner lagi; karena pendingFocusIdRef sudah
+        // dikonsumsi pada run pertama, cabang else-nya men-scroll ke baris 0
+        // (gejala "save selalu balik ke baris 1"). Re-assert id fokus beberapa
+        // kali selama window settle agar SETIAP run Combiner memfokuskan ulang
+        // baris yang benar, lalu bersihkan supaya tidak mengganggu navigasi.
+        if (focusId != null) {
+          [120, 320, 620].forEach((d) =>
+            setTimeout(() => {
+              pendingFocusIdRef.current = String(focusId);
+            }, d)
+          );
+          // Klaim ulang fokus DOM di ekor jendela settle: Radix baru melepas
+          // dialog (dan sempat menggeser fokus) setelah animasi tutup selesai,
+          // yang bisa mendarat belakangan daripada selectCell di 50/200ms.
+          [350, 700].forEach((d) => setTimeout(focusSelectedCell, d));
+          setTimeout(() => dbgActive('AKHIR-harusnya-gridcell'), 1100);
+          setTimeout(() => {
+            // Bersihkan HANYA kalau masih id kita: jangan wipe fokus yang
+            // sudah di-set alur lain (mis. hapus baris) di sela-sela ini.
+            if (String(pendingFocusIdRef.current) === String(focusId)) {
+              pendingFocusIdRef.current = null;
+            }
+          }, 950);
+        }
+        // Dilepas PALING AKHIR (setelah pendingFocusIdRef bersih di 950ms) agar
+        // tidak ada jeda di mana kedua guard sudah mati tapi refetch pasca-simpan
+        // baru mendarat -- jeda itu yang dipakai ekor bulk-fetch untuk lompat ke
+        // baris 0. Samakan dengan GridAlatbayar.
+        setTimeout(() => {
+          suppressRefetchRef.current = false;
+        }, 1000);
       }
 
       setIsDataUpdated(false);
     } catch (error) {
+      dbg('!!) onSuccess MELEMPAR -> fokus dibatalkan', error);
       console.error('Error during onSuccess:', error);
+      // WAJIB dilepas di sini juga. Kalau GET redis di atas gagal, setTimeout
+      // pelepas tak pernah terpasang sehingga ref tersangkut true selamanya dan
+      // memblokir SEMUA refresh grid berikutnya.
+      suppressRefetchRef.current = false;
+      pendingFocusIdRef.current = null;
       setIsFetchingManually(false);
       setIsDataUpdated(false);
     }
   };
   const onSubmit = async (
     values: PengeluaranHeaderInput,
-    keepOpenModal = false
+    keepOpenModalArg: unknown = false
   ) => {
+    // react-hook-form memanggil callback-nya dengan (values, event). Form di
+    // FormPengeluaran dipasang `onSubmit={forms.handleSubmit(onSubmit)}`, jadi
+    // pada submit NATIVE (mis. tekan ENTER di sebuah field) argumen kedua yang
+    // masuk ke sini adalah objek EVENT -- truthy, bukan boolean. Tanpa
+    // penyempitan ke `=== true`, Enter diperlakukan seperti "SAVE & ADD":
+    // form di-reset tapi dialog TETAP TERBUKA, Radix FocusScope menjebak fokus
+    // di dalam dialog, dan grid di belakangnya tampak "tidak ter-focus" padahal
+    // barisnya sudah dipilih dengan benar. Hanya tombol SAVE & ADD yang boleh
+    // mengirim true (lihat FormPengeluaran onSaveAndAdd).
+    const keepOpenModal = keepOpenModalArg === true;
     clearError();
     const selectedRowId = rows[selectedRow]?.id;
 
@@ -2270,7 +2405,8 @@ const GridPengeluaranHeader = () => {
                 data.fetchedPages,
                 data.pagedData,
                 data.pageNumber,
-                keepOpenModal
+                keepOpenModal,
+                data.newItem?.id ?? null
               )
           }
         );
@@ -2281,6 +2417,9 @@ const GridPengeluaranHeader = () => {
       }
 
       if (selectedRowId && mode === 'edit') {
+        // JANGAN invalidateQueries('pengeluaran') setelah ini: refetch-nya
+        // menimpa baris + fokus yang baru di-set onSuccess sehingga grid
+        // balik ke baris 1. onSuccess sudah otoritatif (lihat useAlatbayar).
         await updatePengeluaran(
           {
             id: selectedRowId as unknown as string,
@@ -2292,11 +2431,12 @@ const GridPengeluaranHeader = () => {
                 data.itemIndex,
                 data.fetchedPages,
                 data.pagedData,
-                data.pageNumber
+                data.pageNumber,
+                false,
+                data.updatedItem?.id ?? null
               )
           }
         );
-        queryClient.invalidateQueries('pengeluaran');
       }
     } catch (error: any) {
       if (error?.response?.status !== 400) {
@@ -2584,6 +2724,7 @@ const GridPengeluaranHeader = () => {
   }, []);
   useEffect(() => {
     if (isFirstLoad && gridRef.current && rows.length > 0) {
+      dbg('6!) effect isFirstLoad MEMAKSA baris 0 <-- perebut fokus');
       setSelectedRow(0);
       gridRef.current.selectCell({ rowIdx: 0, idx: 1 });
       dispatch(setHeaderData(rows[0]));
@@ -2639,7 +2780,16 @@ const GridPengeluaranHeader = () => {
 
   useEffect(() => {
     const handleBulkFetch = async () => {
-      if (!shouldBulkFetch || !allData || isDataUpdated || isAfterMutation) {
+      if (
+        !shouldBulkFetch ||
+        !allData ||
+        isDataUpdated ||
+        isAfterMutation ||
+        // Selama settle pasca-simpan, jangan biarkan hasil refetch membangun
+        // ulang cache — kalau tidak, Row Combiner jalan lagi setelah
+        // pendingFocusIdRef dikonsumsi dan fokus loncat ke baris 1.
+        suppressRefetchRef.current
+      ) {
         return;
       }
 
@@ -2680,7 +2830,20 @@ const GridPengeluaranHeader = () => {
         prefetchPages(initialPrefetch, newCache, totalPgs);
       }
       setTimeout(() => {
+        // JANGAN rebut fokus pasca-simpan. Guard `suppressRefetchRef` di atas
+        // hanya dievaluasi saat effect MASUK, sedangkan setTimeout ini menyala
+        // 100ms kemudian tanpa syarat -- itulah yang membuat grid balik ke baris
+        // 1 setelah SAVE meski resep fokus by-id sudah lengkap. Selama masih ada
+        // baris target pasca-simpan (pendingFocusIdRef) atau window belum settle
+        // (suppressRefetchRef), posisi baris sudah ditentukan onSuccess + Row
+        // Combiner, jadi lompatan ke baris 0 di sini harus dilewati.
+        // GridAlatbayar (referensi resep ini) memang tidak punya blok ini.
+        if (pendingFocusIdRef.current != null || suppressRefetchRef.current) {
+          dbg('5) ekor bulk-fetch DILEWATI (guard aktif)');
+          return;
+        }
         if (gridRef.current) {
+          dbg('5!) ekor bulk-fetch MEMAKSA baris 0 <-- perebut fokus');
           setSelectedRow(0);
           gridRef.current.scrollToCell({ rowIdx: 0, idx: 1 });
         }
@@ -2689,7 +2852,12 @@ const GridPengeluaranHeader = () => {
     handleBulkFetch();
   }, [allData, shouldBulkFetch, isDataUpdated, isAfterMutation, filters.limit]);
   useEffect(() => {
-    if (shouldBulkFetch || isDataUpdated || isAfterMutation) {
+    if (
+      shouldBulkFetch ||
+      isDataUpdated ||
+      isAfterMutation ||
+      suppressRefetchRef.current
+    ) {
       return;
     }
 
@@ -2794,11 +2962,62 @@ const GridPengeluaranHeader = () => {
       }
     });
 
+    if (combinedRows.length === 0) {
+      dbg('3!) Combiner jalan tapi combinedRows KOSONG -> tidak ada fokus', {
+        visiblePages,
+        cacheKeys: Array.from(pageDataCache.keys()),
+        pendingFocusId: pendingFocusIdRef.current
+      });
+    }
+
     if (combinedRows.length > 0) {
       const newMinPage = Math.min(...visiblePages);
       setRows(combinedRows);
       prevMinPageRef.current = newMinPage;
       prevRowsLengthRef.current = combinedRows.length;
+
+      // --- Fokus baris yang baru disimpan (add/edit) BERDASARKAN ID ---
+      // Backend mengembalikan window yang memuat baris tsb; cari index-nya di
+      // sini lalu scroll+select. Pakai idx 1 (kolom data pertama) agar tidak
+      // memicu pergeseran window oleh handleScroll. `return` mencegah cabang
+      // else di bawah men-scroll ke row 0.
+      if (pendingFocusIdRef.current != null) {
+        const fid = pendingFocusIdRef.current;
+        pendingFocusIdRef.current = null;
+        const fidx = combinedRows.findIndex(
+          (r) => String(r.id) === String(fid)
+        );
+        dbg('3) Combiner cabang FOKUS', {
+          fid,
+          fidx,
+          totalCombined: combinedRows.length,
+          visiblePages
+        });
+        if (fidx >= 0) {
+          selectedRowRef.current = fidx;
+          setSelectedRow(fidx);
+          setTimeout(() => {
+            gridRef.current?.scrollToCell?.({ rowIdx: fidx, idx: 1 });
+            gridRef.current?.selectCell?.({ rowIdx: fidx, idx: 1 });
+            focusSelectedCell();
+            dbg('4) selectCell dipanggil utk rowIdx', fidx);
+            dbgActive('setelah-selectCell');
+          }, 50);
+        } else {
+          dbg('!! id tidak ketemu di combinedRows', {
+            cari: fid,
+            contohId: combinedRows.slice(0, 5).map((r) => r.id)
+          });
+        }
+        return;
+      }
+      dbg('3x) Combiner JALAN TANPA pendingFocusId', {
+        totalCombined: combinedRows.length,
+        jumpFirst: jumpToFirstRef.current,
+        jumpLast: jumpToLastRef.current,
+        pageTransition: isPageTransitionRef.current,
+        suppress: suppressRefetchRef.current
+      });
 
       if (jumpToFirstRef.current) {
         jumpToFirstRef.current = false;
@@ -3194,7 +3413,14 @@ const GridPengeluaranHeader = () => {
         isLoadingDelete={isLoadingDelete}
         forms={forms}
         mode={mode}
-        onSubmit={forms.handleSubmit(onSubmit as any)}
+        // Kirim handler MENTAH, jangan dibungkus forms.handleSubmit di sini.
+        // FormPengeluaran sudah membungkusnya sendiri (onSave/onSaveAndAdd dan
+        // <form onSubmit>) supaya bisa menentukan keepOpenModal. Kalau dibungkus
+        // dua kali, pemanggilan jadi handleSubmit(...)(values, false) padahal
+        // handler RHF bersignature (event): RHF memperlakukan `values` sebagai
+        // event lalu meneruskannya sebagai argumen KEDUA ke sini -> keepOpenModal
+        // terisi objek truthy -> dialog tidak pernah menutup setelah SAVE.
+        onSubmit={onSubmit as any}
         isLoadingCreate={isLoadingCreate}
       />
     </div>

@@ -40,7 +40,14 @@ export default function FormFooterButtons({
 }: FormFooterButtonsProps) {
   const loading = isLoadingCreate || isLoadingUpdate || isLoadingDelete;
   const isDisabled = saveDisabled ?? mode === 'view';
-  const isDelete = mode === 'delete';
+  // Label tombol jadi DELETE bila mode-nya delete, TANPA perlu prop deleteMode.
+  // Sebelumnya label ini hanya bergantung pada prop `deleteMode`, sehingga 27
+  // form yang cuma mengirim `mode` (FormPengeluaran, FormJurnalUmum, FormHutang,
+  // FormKasGantung, FormPenerimaan, dll) tetap menampilkan "SAVE" saat menghapus.
+  // Prop `deleteMode` tetap didukung untuk grid lama yang memakai state boolean
+  // sendiri (GridParameter/GridRole/GridErrors/GridOffdays) dan tidak mengirim
+  // mode='delete'.
+  const isDelete = deleteMode || mode === 'delete';
   const showSaveAndAdd =
     !hideSaveAndAdd && mode === 'add' && typeof onSaveAndAdd === 'function';
 
@@ -84,7 +91,7 @@ export default function FormFooterButtons({
         )}
       >
         <p className="text-center text-sm">
-          {deleteMode ? (
+          {isDelete ? (
             'DELETE'
           ) : (
             <>

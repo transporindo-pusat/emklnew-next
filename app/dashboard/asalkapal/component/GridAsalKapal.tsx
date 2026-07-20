@@ -177,8 +177,10 @@ const GridAsalKapal = () => {
       nominal: undefined,
       keterangan: '',
       statusaktif: '',
-      cabang_id: 0,
-      container_id: 0
+      // id VARCHAR/UUID, bukan angka — default 0 membuat nilainya bertipe
+      // number sehingga zod (z.string) menolak sebelum user mengisi LookUp.
+      cabang_id: '',
+      container_id: ''
     }
   });
   const router = useRouter();
@@ -1498,8 +1500,8 @@ const GridAsalKapal = () => {
       keterangan: '',
       statusaktif: aktif.id,
       statusaktif_nama: aktif.text,
-      cabang_id: 0,
-      container_id: 0
+      cabang_id: '',
+      container_id: ''
     });
   };
 

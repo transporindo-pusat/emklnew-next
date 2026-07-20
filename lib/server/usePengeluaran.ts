@@ -93,23 +93,24 @@ export const useGetPengeluaranDetail = (
 };
 
 export const useCreatePengeluaran = () => {
-  const queryClient = useQueryClient();
   const dispatch = useDispatch();
   const { alert } = useAlert();
   const { setError } = useFormError();
 
+  // Sengaja TIDAK invalidateQueries('pengeluaran') di sini. Alur onSuccess di
+  // GridPengeluaranHeader sudah otoritatif: ia mengambil window baru dari redis
+  // lalu setCurrentPage(pageNumber) yang memicu refetch halaman yang BENAR.
+  // invalidateQueries malah me-refetch `currentPage` yang mungkin masih basi;
+  // karena useGetPengeluaranHeader memakai staleTime/cacheTime 0, refetch itu
+  // selalu jalan, tiba paling akhir, dan menimpa baris + fokus hasil onSuccess
+  // -> form seolah tidak memposisikan ke baris yang baru disimpan. Sama seperti
+  // useCreateAlatbayar.
   return useMutation(storePengeluaranFn, {
     // before the mutation fn runs
     onMutate: () => {
       dispatch(setProcessing());
     },
-    // on success, invalidate + toast + clear loading
     onSuccess: () => {
-      void queryClient.invalidateQueries(['pengeluaran']);
-      //   toast({
-      //     title: 'Proses Berhasil',
-      //     description: 'Data Berhasil Ditambahkan'
-      //   });
       dispatch(setProcessed());
     },
     // on error, toast + clear loading
@@ -176,7 +177,6 @@ export const useGetPengeluaranHeaderList = (
   );
 };
 export const useUpdatePengeluaran = () => {
-  const queryClient = useQueryClient();
   // `alert` HARUS diambil dari useAlert(). Tanpa ini, `alert(...)` di bawah
   // terhubung ke window.alert global → muncul popup native "[object Object]"
   // saat update gagal, dan error validasi 400 per-field tak pernah ditampilkan
@@ -184,10 +184,9 @@ export const useUpdatePengeluaran = () => {
   const { alert } = useAlert();
   const { setError } = useFormError();
 
+  // Sama seperti useCreatePengeluaran: JANGAN invalidateQueries di sini.
+  // onSuccess di GridPengeluaranHeader yang mengatur data + posisi baris.
   return useMutation(updatePengeluaranFn, {
-    onSuccess: () => {
-      void queryClient.invalidateQueries('pengeluaran');
-    },
     onError: (error: AxiosError) => {
       const errorResponse = error.response?.data as IErrorResponse;
       if (errorResponse !== undefined) {

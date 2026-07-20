@@ -147,6 +147,11 @@ const GridMasterbiaya = () => {
 
   const [totalPages, setTotalPages] = useState(1);
   const [popOver, setPopOver] = useState<boolean>(false);
+  // Dinaikkan setiap "Save & Add" untuk me-remount form (Dialog) agar semua
+  // LookUp re-init dari nilai form hasil resetAddForm -> STATUS AKTIF kembali
+  // ke "AKTIF" dan field lain kosong. Tanpa ini, modal yang tetap terbuka
+  // membuat LookUp memakai state lama (tampilan status aktif kosong).
+  const [addFormKey, setAddFormKey] = useState<number>(0);
   const { mutateAsync: createMasterbiaya, isLoading: isLoadingCreate } =
     useCreateMasterBiaya();
   const { mutateAsync: updateMasterbiaya, isLoading: isLoadingUpdate } =
@@ -1628,18 +1633,107 @@ const GridMasterbiaya = () => {
       }
     }
   }
+  // Cache default STATUS AKTIF ("AKTIF") supaya tidak fetch berulang.
+  const statusAktifDefaultRef = useRef<{ id: string; text: string } | null>(
+    null
+  );
+
+  // Reset form mode "add" sekaligus set default STATUS AKTIF = "AKTIF".
+  // LookUp tidak punya auto-default untuk field ini, jadi di-set eksplisit dari
+  // tabel parameter (grp='status aktif'). `statusaktif` menyimpan id (varchar,
+  // bukan angka) dan `text` menyimpan teks yang ditampilkan LookUp.
+  const resetAddForm = async () => {
+    let aktif = statusAktifDefaultRef.current;
+    if (!aktif) {
+      try {
+        const res = await api2.get('/parameter', {
+          params: { grp: 'status aktif' }
+        });
+        const params: any[] = res?.data?.data ?? res?.data ?? [];
+        const row =
+          params.find((p) => p?.default === 'YA') ??
+          params.find((p) => String(p?.text).toUpperCase() === 'AKTIF');
+        aktif = row
+          ? { id: String(row.id), text: row.text ?? 'AKTIF' }
+          : { id: '', text: '' };
+        statusAktifDefaultRef.current = aktif;
+      } catch (e) {
+        console.error('Gagal mengambil default STATUS AKTIF:', e);
+        aktif = { id: '', text: '' };
+      }
+    }
+    forms.reset({
+      tujuankapal_id: '',
+      tujuankapal_text: '',
+      sandarkapal_id: '',
+      sandarkapal_text: '',
+      pelayaran_id: '',
+      pelayaran_text: '',
+      container_id: '',
+      container_text: '',
+      biayaemkl_id: '',
+      biayaemkl_text: '',
+      jenisorder_id: '',
+      jenisorderan_text: '',
+      tglberlaku: '',
+      nominal: '',
+      statusaktif: aktif.id,
+      text: aktif.text
+    });
+  };
+
+  // Isi form dari satu baris grid. Dipakai effect (saat navigasi grid) DAN
+  // dipanggil eksplisit sebelum modal edit/view/delete dibuka. Pemanggilan
+  // eksplisit itu wajib: LookUp membaca `inputLookupValue`/`lookupNama` lewat
+  // getValues() sekali saat mount, sedangkan effect baru jalan SETELAH render --
+  // kalau hanya mengandalkan effect, LookUp terlanjur mount dengan nilai kosong
+  // dan field tampak kosong walau state form-nya sudah benar.
+  const fillFormFromRow = (rowData: any) => {
+    if (!rowData) return;
+    forms.setValue('tujuankapal_id', String(rowData?.tujuankapal_id ?? ''));
+    forms.setValue('tujuankapal_text', rowData?.tujuankapal_text);
+
+    forms.setValue('sandarkapal_id', String(rowData?.sandarkapal_id ?? ''));
+    forms.setValue('sandarkapal_text', rowData?.sandarkapal_text);
+
+    forms.setValue('pelayaran_id', String(rowData?.pelayaran_id ?? ''));
+    forms.setValue('pelayaran_text', rowData?.pelayaran_text);
+
+    forms.setValue('container_id', String(rowData?.container_id ?? ''));
+    forms.setValue('container_text', rowData?.container_text);
+
+    forms.setValue('biayaemkl_id', String(rowData?.biayaemkl_id ?? ''));
+    forms.setValue('biayaemkl_text', rowData?.biayaemkl_text);
+
+    forms.setValue('jenisorder_id', String(rowData?.jenisorder_id ?? ''));
+    forms.setValue('jenisorderan_text', rowData?.jenisorderan_text);
+
+    forms.setValue('tglberlaku', rowData?.tglberlaku);
+    forms.setValue('nominal', formatCurrency(rowData?.nominal));
+
+    forms.setValue('statusaktif', rowData?.statusaktif ?? '');
+    forms.setValue('text', rowData?.text);
+  };
+
   const onSuccess = async (
     indexOnPage: any,
     pageNumber: any,
     keepOpenModal: any = false
   ) => {
-    dispatch(setClearLookup(true));
     clearError();
     try {
       if (keepOpenModal) {
-        forms.reset();
+        // SAVE & ADD: reset form (STATUS AKTIF kembali ke "AKTIF") lalu remount
+        // modal via addFormKey agar LookUp re-init dari nilai form yang baru --
+        // `inputLookupValue`/`lookupNama` dibaca lewat getValues() saat mount,
+        // jadi tanpa remount tampilannya tetap kosong. JANGAN dispatch
+        // setClearLookup di cabang ini: pada mount, effect clearLookup berjalan
+        // SETELAH init sehingga malah mengosongkan status aktif yang baru di-set.
+        await resetAddForm();
+        setAddFormKey((k) => k + 1);
         setPopOver(true);
       } else {
+        dispatch(setClearLookup(true));
         forms.reset();
         setPopOver(false);
         setIsFetchingManually(true);
@@ -1735,21 +1829,25 @@ const GridMasterbiaya = () => {
     }
   };
 
+  // Isi form SEBELUM setPopOver(true) pada ketiga mode di bawah, supaya LookUp
+  // sudah melihat nilainya saat mount (lihat fillFormFromRow).
   const handleEdit = () => {
     if (selectedRow !== null) {
-      const rowData = rows[selectedRow];
-      setPopOver(true);
+      fillFormFromRow(rows[selectedRow]);
       setMode('edit');
+      setPopOver(true);
     }
   };
   const handleDelete = () => {
     if (selectedRow !== null) {
+      fillFormFromRow(rows[selectedRow]);
       setMode('delete');
       setPopOver(true);
     }
   };
   const handleView = () => {
     if (selectedRow !== null) {
+      fillFormFromRow(rows[selectedRow]);
       setMode('view');
       setPopOver(true);
     }
@@ -1980,14 +2078,14 @@ const GridMasterbiaya = () => {
   };
   const handleAdd = async () => {
     try {
-      // Jalankan API sinkronisasi
       setMode('add');
-
+      // Ambil default AKTIF lalu reset SEBELUM modal dibuka: LookUp membaca
+      // `inputLookupValue`/`lookupNama` lewat getValues() sekali saat mount,
+      // jadi nilainya harus sudah ada sebelum Dialog dirender.
+      await resetAddForm();
       setPopOver(true);
-
-      // forms.reset();
     } catch (error) {
-      console.error('Error syncing ACOS:', error);
+      console.error('Error add master biaya:', error);
     }
   };
 
@@ -2137,35 +2235,16 @@ const GridMasterbiaya = () => {
   }, []);
 
   useEffect(() => {
-    const rowData = rows[selectedRow];
     if (selectedRow !== null && rows.length > 0 && mode !== 'add') {
-      forms.setValue('tujuankapal_id', String(rowData?.tujuankapal_id ?? ''));
-      forms.setValue('tujuankapal_text', rowData?.tujuankapal_text);
-
-      forms.setValue('sandarkapal_id', String(rowData?.sandarkapal_id ?? ''));
-      forms.setValue('sandarkapal_text', rowData?.sandarkapal_text);
-
-      forms.setValue('pelayaran_id', String(rowData?.pelayaran_id ?? ''));
-      forms.setValue('pelayaran_text', rowData?.pelayaran_text);
-
-      forms.setValue('container_id', String(rowData?.container_id ?? ''));
-      forms.setValue('container_text', rowData?.container_text);
-
-      forms.setValue('biayaemkl_id', String(rowData?.biayaemkl_id ?? ''));
-      forms.setValue('biayaemkl_text', rowData?.biayaemkl_text);
-
-      forms.setValue('jenisorder_id', String(rowData?.jenisorder_id ?? ''));
-      forms.setValue('jenisorderan_text', rowData?.jenisorderan_text);
-
-      forms.setValue('tglberlaku', rowData?.tglberlaku);
-      forms.setValue('nominal', formatCurrency(rowData?.nominal));
-
-      forms.setValue('statusaktif', rowData?.statusaktif ?? '');
-      forms.setValue('text', rowData?.text);
-    } else if (selectedRow !== null && rows.length > 0 && mode === 'add') {
-      // If in addMode, ensure the form values are cleared
-      forms.reset();
+      fillFormFromRow(rows[selectedRow]);
     }
+    // JANGAN forms.reset() saat mode 'add' di sini. Effect ini ikut ter-trigger
+    // setiap kali `rows` di-update background fetch selama modal Add terbuka,
+    // sehingga me-reset nilai yang sudah diisi user KE default kosong -- termasuk
+    // menghapus STATUS AKTIF = "AKTIF" yang baru di-set resetAddForm(). Karena
+    // `statusaktif` wajib (z.string().min(1)), hasilnya validasi gagal dan SAVE
+    // seolah "tidak terjadi apa-apa". Reset form add-mode sudah ditangani
+    // handleAdd()/onSuccess() lewat resetAddForm().
   }, [forms, selectedRow, rows, mode]);
   useEffect(() => {
     // Initialize the refs based on columns dynamically
@@ -2392,6 +2471,7 @@ const GridMasterbiaya = () => {
         </div>
       </div>
       <FormMasterbiaya
+        key={addFormKey}
         popOver={popOver}
         handleClose={handleClose}
         setPopOver={setPopOver}
