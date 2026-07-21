@@ -22,6 +22,7 @@ import { FaSave } from 'react-icons/fa';
 import { useDispatch } from 'react-redux';
 import { setSubmitClicked } from '@/lib/store/lookupSlice/lookupSlice';
 import InputCurrency from '@/components/custom-ui/InputCurrency';
+import { useFormState } from 'react-hook-form';
 
 const FormAsalKapal = ({
   popOver,
@@ -86,6 +87,10 @@ const FormAsalKapal = ({
   const formRef = useRef<HTMLFormElement | null>(null); // Ref untuk form
   const openName = useSelector((state: RootState) => state.lookup.openName);
   const dispatch = useDispatch();
+  // Berlangganan error Zod agar LookUp bisa menampilkan pesan wajib walau
+  // kotaknya berisi teks tetapi id di baliknya kosong (kasus yang tidak
+  // tertangkap mekanisme submitClicked yang hanya cek input kosong).
+  const { errors } = useFormState({ control: forms.control });
 
   return (
     <Dialog open={popOver} onOpenChange={setPopOver}>
@@ -135,10 +140,13 @@ const FormAsalKapal = ({
                           key={index}
                           {...props}
                           lookupValue={(id) =>
-                            forms.setValue('cabang_id', id)
+                            forms.setValue('cabang_id', id as string, {
+                              shouldValidate: true
+                            })
                           }
                           inputLookupValue={forms.getValues('cabang_id')}
                           lookupNama={forms.getValues('cabang')}
+                          errorMessage={errors?.cabang_id?.message as string}
                           disabled={mode === 'view' || mode === 'delete'}
                         />
                       ))}
@@ -213,10 +221,13 @@ const FormAsalKapal = ({
                           key={index}
                           {...props}
                           lookupValue={(id) =>
-                            forms.setValue('container_id', id)
+                            forms.setValue('container_id', id as string, {
+                              shouldValidate: true
+                            })
                           }
                           inputLookupValue={forms.getValues('container_id')}
                           lookupNama={forms.getValues('container')}
+                          errorMessage={errors?.container_id?.message as string}
                           disabled={mode === 'view' || mode === 'delete'}
                         />
                       ))}
@@ -238,10 +249,13 @@ const FormAsalKapal = ({
                           key={index}
                           {...props}
                           lookupValue={(id) =>
-                            forms.setValue('statusaktif', id)
+                            forms.setValue('statusaktif', id as string, {
+                              shouldValidate: true
+                            })
                           }
                           inputLookupValue={forms.getValues('statusaktif')}
                           lookupNama={forms.getValues('statusaktif_nama')}
+                          errorMessage={errors?.statusaktif?.message as string}
                           disabled={mode === 'view' || mode === 'delete'}
                         />
                       ))}
