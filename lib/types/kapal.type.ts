@@ -7,7 +7,7 @@ export interface IKapal {
   text: string;
   statusaktif: string;
   pelayaran: string;
-  pelayaran_id: number;
+  pelayaran_id: string;
   created_at: string;
   updated_at: string;
 }

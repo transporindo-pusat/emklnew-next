@@ -18,11 +18,11 @@ export interface PengeluaranEmkl {
   coahutangkredit_nama: string | null;
   coaproses: string;
   coaproses_nama: string | null;
-  nilaiprosespenerimaan: number;
+  nilaiprosespenerimaan: string;
   nilaiprosespenerimaan_nama: string | null;
-  nilaiprosespengeluaran: number;
+  nilaiprosespengeluaran: string;
   nilaiprosespengeluaran_nama: string | null;
-  nilaiproseshutang: number;
+  nilaiproseshutang: string;
   nilaiproseshutang_nama: string | null;
   statuspenarikan: string;
   statuspenarikan_nama: string | null;

@@ -85,7 +85,7 @@ import FilterOptions from '@/components/custom-ui/FilterOptions';
 import { getAsalKapalFn } from '@/lib/apis/asalkapal.api';
 import { setReportFilter } from '@/lib/store/printSlice/printSlice';
 import Alert from '@/components/custom-ui/AlertCustom';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, parseCurrency } from '@/lib/utils';
 import {
   Tooltip,
   TooltipContent,
@@ -177,8 +177,6 @@ const GridAsalKapal = () => {
       nominal: undefined,
       keterangan: '',
       statusaktif: '',
-      // id VARCHAR/UUID, bukan angka — default 0 membuat nilainya bertipe
-      // number sehingga zod (z.string) menolak sebelum user mengisi LookUp.
       cabang_id: '',
       container_id: ''
     }
@@ -1201,6 +1199,13 @@ const GridAsalKapal = () => {
   };
   const onSubmit = async (values: AsalKapalInput, keepOpenModal = false) => {
     const selectedRowId = rows[selectedRow]?.id;
+    // InputCurrency menyimpan nominal berformat ribuan (mis. "30,000.00").
+    // Kolom DB bertipe numeric, jadi kirim angka bersih tanpa koma agar insert
+    // tidak gagal (500) di PostgreSQL.
+    const payload = {
+      ...values,
+      nominal: String(parseCurrency(String(values.nominal ?? '')))
+    };
     try {
       dispatch(setProcessing());
       if (mode === 'delete') {
@@ -1229,7 +1234,7 @@ const GridAsalKapal = () => {
       if (mode === 'add') {
         const newOrder = await createAsalKapal(
           {
-            ...values,
+            ...payload,
             ...filters // Kirim filter ke body/payload
           },
           {
@@ -1246,7 +1251,7 @@ const GridAsalKapal = () => {
         await updateAsalKapal(
           {
             id: selectedRowId as unknown as string,
-            fields: { ...values, ...filters }
+            fields: { ...payload, ...filters }
           },
           { onSuccess: (data) => onSuccess(data.itemIndex, data.pageNumber) }
         );
@@ -1473,7 +1478,9 @@ const GridAsalKapal = () => {
     forms.reset();
   };
 
-  const statusAktifDefaultRef = useRef<{ id: string; text: string } | null>(null);
+  const statusAktifDefaultRef = useRef<{ id: string; text: string } | null>(
+    null
+  );
 
   const resetAddForm = async () => {
     let aktif = statusAktifDefaultRef.current;
@@ -1658,14 +1665,9 @@ const GridAsalKapal = () => {
       forms.setValue('keterangan', rowData?.keterangan);
       forms.setValue('statusaktif', rowData?.statusaktif ?? '');
       forms.setValue('statusaktif_nama', rowData?.text || '');
-      // cabang_id & container_id adalah UUID/text (mis. "02-E4CF9E01-..."),
-      // BUKAN angka. Number(uuid) => NaN => `|| 1` menjadikannya angka 1,
-      // sementara schema meminta z.string() sehingga handleSubmit menolak dan
-      // SAVE edit "tidak melakukan apa-apa" tanpa pesan error (LookUp tidak
-      // merender FormMessage). Pertahankan sebagai string.
-      forms.setValue('cabang_id', String(rowData?.cabang_id ?? ''));
+      forms.setValue('cabang_id', rowData?.cabang_id ?? '');
       forms.setValue('cabang', rowData?.cabang || '');
-      forms.setValue('container_id', String(rowData?.container_id ?? ''));
+      forms.setValue('container_id', rowData?.container_id ?? '');
       forms.setValue('container', rowData?.container || '');
     }
     // JANGAN set/reset form saat mode 'add' di sini — resetAddForm() di handleAdd menanganinya
