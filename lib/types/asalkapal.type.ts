@@ -2,14 +2,14 @@ import { IMeta } from './error.type';
 
 export interface IAsalKapal {
   id: string;
-  nominal:  number | null ;
+  nominal: number | null;
   keterangan: string;
   text: string;
   statusaktif: string;
   cabang: string;
-  cabang_id: number;
+  cabang_id: string;
   container: string;
-  container_id: number;
+  container_id: string;
   created_at: string;
   updated_at: string;
 }

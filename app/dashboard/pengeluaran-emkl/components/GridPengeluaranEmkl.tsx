@@ -1752,10 +1752,44 @@ const GridPengeluaranEmkl = () => {
     }));
   }, [orderedColumns, columnsWidth]);
 
+  const statusAktifDefaultRef = useRef<{ id: string; text: string } | null>(
+    null
+  );
+
+  // Ambil default STATUS AKTIF (parameter grp "status aktif" yang default = 'YA')
+  // lalu reset form add dengan STATUS AKTIF sudah terisi AKTIF.
+  const resetAddForm = async () => {
+    let aktif = statusAktifDefaultRef.current;
+    if (!aktif) {
+      try {
+        const res = await api2.get('/parameter', {
+          params: { grp: 'status aktif' }
+        });
+        const params: any[] = res?.data?.data ?? res?.data ?? [];
+        const row =
+          params.find((p) => p?.default === 'YA') ??
+          params.find((p) => String(p?.text).toUpperCase() === 'AKTIF');
+        aktif = row
+          ? { id: String(row.id), text: row.text ?? 'AKTIF' }
+          : { id: '', text: '' };
+        statusAktifDefaultRef.current = aktif;
+      } catch (e) {
+        console.error('Gagal mengambil default STATUS AKTIF:', e);
+        aktif = { id: '', text: '' };
+      }
+    }
+    forms.reset({
+      nama: '',
+      keterangan: '',
+      statusaktif: aktif.id,
+      statusaktif_nama: aktif.text
+    });
+  };
+
   const handleAdd = async () => {
     setPopOver(true);
     setMode('add');
-    forms.reset();
+    await resetAddForm();
   };
 
   const handleEdit = async () => {
@@ -2427,7 +2461,7 @@ const GridPengeluaranEmkl = () => {
     const rowData = rows[selectedRow];
 
     if (selectedRow !== null && rows.length > 0 && mode !== 'add') {
-      forms.setValue('id', Number(rowData?.id));
+      forms.setValue('id', rowData?.id ?? '');
       forms.setValue('nama', rowData?.nama);
       forms.setValue('keterangan', rowData?.keterangan);
       forms.setValue('coadebet', rowData?.coadebet || null);
@@ -2458,7 +2492,7 @@ const GridPengeluaranEmkl = () => {
       forms.setValue('coaproses_nama', rowData?.coaproses_nama);
       forms.setValue(
         'nilaiprosespenerimaan',
-        Number(rowData?.nilaiprosespenerimaan) || 0
+        rowData?.nilaiprosespenerimaan ?? ''
       );
       forms.setValue(
         'nilaiprosespenerimaan_nama',
@@ -2466,16 +2500,13 @@ const GridPengeluaranEmkl = () => {
       );
       forms.setValue(
         'nilaiprosespengeluaran',
-        Number(rowData?.nilaiprosespengeluaran) || 0
+        rowData?.nilaiprosespengeluaran ?? ''
       );
       forms.setValue(
         'nilaiprosespengeluaran_nama',
         rowData?.nilaiprosespengeluaran_nama || ''
       );
-      forms.setValue(
-        'nilaiproseshutang',
-        Number(rowData?.nilaiproseshutang) || 0
-      );
+      forms.setValue('nilaiproseshutang', rowData?.nilaiproseshutang ?? '');
       forms.setValue(
         'nilaiproseshutang_nama',
         rowData?.nilaiproseshutang_nama || ''
@@ -2485,12 +2516,12 @@ const GridPengeluaranEmkl = () => {
         'statuspenarikan_nama',
         rowData?.statuspenarikan_nama || ''
       );
-      forms.setValue('format', Number(rowData?.format) || 0);
+      forms.setValue('format', rowData?.format ?? '');
       forms.setValue('format_nama', rowData?.format_nama || '');
       forms.setValue('statusaktif', rowData?.statusaktif ?? '');
       forms.setValue('statusaktif_nama', rowData?.statusaktif_nama || '');
     } else if (selectedRow !== null && rows.length > 0 && mode === 'add') {
-      forms.setValue('id', 0);
+      forms.setValue('id', '');
     }
   }, [forms, selectedRow, rows, mode, popOver]);
 

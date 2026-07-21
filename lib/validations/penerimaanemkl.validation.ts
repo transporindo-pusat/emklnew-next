@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { dynamicRequiredMessage } from '../utils';
 
 export const penerimaanEmklSchema = z.object({
-  id: z.number().nullable().optional(),
+  id: z.string().nullable().optional(),
   nama: z.string().min(1, { message: dynamicRequiredMessage('NAMA') }),
   keterangan: z
     .string({ message: dynamicRequiredMessage('KETERANGAN') })
@@ -30,25 +30,23 @@ export const penerimaanEmklSchema = z.object({
   coaproses: z.string().nullable().optional(),
   coaproses_nama: z.string().nullable().optional(),
 
-  nilaiprosespenerimaan: z.number().nullable().optional(),
+  nilaiprosespenerimaan: z.string().nullable().optional(),
   nilaiprosespenerimaan_nama: z.string().nullable().optional(),
 
-  nilaiprosespengeluaran: z.number().nullable().optional(),
+  nilaiprosespengeluaran: z.string().nullable().optional(),
   nilaiprosespengeluaran_nama: z.string().nullable().optional(),
 
-  nilaiproseshutang: z.number().nullable().optional(),
+  nilaiproseshutang: z.string().nullable().optional(),
   nilaiproseshutang_nama: z.string().nullable().optional(),
 
   statuspenarikan: z.string().nullable().optional(),
   statuspenarikan_nama: z.string().nullable().optional(),
 
-  format: z
-    .number()
-    .int({ message: dynamicRequiredMessage('FORMAT') })
-    .min(1, { message: dynamicRequiredMessage('FORMAT') }),
+  format: z.string().min(1, { message: dynamicRequiredMessage('FORMAT') }),
   format_nama: z.string().nullable().optional(),
 
-  statusaktif: z.string()
+  statusaktif: z
+    .string()
     .min(1, { message: dynamicRequiredMessage('STATUS AKTIF') }),
   statusaktif_nama: z.string().nullable().optional()
 });

@@ -176,7 +176,7 @@ const GridKapal = () => {
       nama: '',
       keterangan: '',
       statusaktif: '',
-      pelayaran_id: 0
+      pelayaran_id: ''
     }
   });
   const router = useRouter();
@@ -1480,7 +1480,9 @@ const GridKapal = () => {
     forms.reset();
   };
 
-  const statusAktifDefaultRef = useRef<{ id: string; text: string } | null>(null);
+  const statusAktifDefaultRef = useRef<{ id: string; text: string } | null>(
+    null
+  );
 
   const resetAddForm = async () => {
     let aktif = statusAktifDefaultRef.current;
@@ -1507,7 +1509,7 @@ const GridKapal = () => {
       keterangan: '',
       statusaktif: aktif.id,
       statusaktif_nama: aktif.text,
-      pelayaran_id: 0
+      pelayaran_id: ''
     });
   };
 
@@ -1657,12 +1659,12 @@ const GridKapal = () => {
       rows.length > 0 &&
       mode !== 'add' // Only fill the form if not in addMode
     ) {
-      forms.setValue('id', Number(rowData?.id));
+      forms.setValue('id', rowData?.id ?? '');
       forms.setValue('nama', rowData?.nama);
       forms.setValue('keterangan', rowData?.keterangan);
       forms.setValue('statusaktif', rowData?.statusaktif ?? '');
       forms.setValue('statusaktif_nama', rowData?.text || '');
-      forms.setValue('pelayaran_id', Number(rowData?.pelayaran_id) || 0);
+      forms.setValue('pelayaran_id', rowData?.pelayaran_id ?? '');
       forms.setValue('pelayaran', rowData?.pelayaran || '');
     }
     // JANGAN set/reset form saat mode 'add' di sini — resetAddForm() di handleAdd menanganinya

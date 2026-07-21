@@ -3,20 +3,21 @@ import { z } from 'zod';
 import { dynamicRequiredMessage } from '../utils';
 
 export const kapalSchema = z.object({
-  id: z.number().nullable().optional(),
+  id: z.string().nullable().optional(),
   nama: z.string().nonempty({ message: dynamicRequiredMessage('NAMA') }),
 
   keterangan: z
     .string()
     .nonempty({ message: dynamicRequiredMessage('KETERANGAN') }),
 
-  statusaktif: z.string()
+  statusaktif: z
+    .string()
     .min(1, { message: dynamicRequiredMessage('STATUSAKTIF') }),
 
   statusaktif_nama: z.string().nullable().optional(),
 
   pelayaran_id: z
-    .number()
+    .string()
     .min(1, { message: dynamicRequiredMessage('PELAYARAN') }),
 
   pelayaran: z.string().nullable().optional()
