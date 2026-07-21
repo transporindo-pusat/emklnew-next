@@ -1658,9 +1658,14 @@ const GridAsalKapal = () => {
       forms.setValue('keterangan', rowData?.keterangan);
       forms.setValue('statusaktif', rowData?.statusaktif ?? '');
       forms.setValue('statusaktif_nama', rowData?.text || '');
-      forms.setValue('cabang_id', Number(rowData?.cabang_id) || 1);
+      // cabang_id & container_id adalah UUID/text (mis. "02-E4CF9E01-..."),
+      // BUKAN angka. Number(uuid) => NaN => `|| 1` menjadikannya angka 1,
+      // sementara schema meminta z.string() sehingga handleSubmit menolak dan
+      // SAVE edit "tidak melakukan apa-apa" tanpa pesan error (LookUp tidak
+      // merender FormMessage). Pertahankan sebagai string.
+      forms.setValue('cabang_id', String(rowData?.cabang_id ?? ''));
       forms.setValue('cabang', rowData?.cabang || '');
-      forms.setValue('container_id', Number(rowData?.container_id) || 1);
+      forms.setValue('container_id', String(rowData?.container_id ?? ''));
       forms.setValue('container', rowData?.container || '');
     }
     // JANGAN set/reset form saat mode 'add' di sini — resetAddForm() di handleAdd menanganinya
