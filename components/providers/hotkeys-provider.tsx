@@ -74,6 +74,11 @@ function normalizeCombo(combo: string): string {
 }
 
 function eventToCombo(event: KeyboardEvent): string {
+  // Sebagian keydown (autofill, event yang di-dispatch programatik, atau state
+  // IME tertentu) tidak punya `event.key` → `.toLowerCase()` melempar
+  // "Cannot read properties of undefined". Kembalikan '' agar onKeyDown bail.
+  if (!event.key) return '';
+
   const parts: string[] = [];
   if (event.ctrlKey) parts.push('ctrl');
   if (event.metaKey) parts.push('meta');

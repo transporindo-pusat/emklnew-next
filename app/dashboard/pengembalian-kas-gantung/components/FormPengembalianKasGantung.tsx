@@ -697,7 +697,6 @@ const FormPengembalianKasGantung = ({
                   mask=""
                   maskPlaceholder={null}
                   className={`h-7 w-full rounded-sm border border-blue-500 px-1 py-1 text-sm text-zinc-900 focus:bg-[#ffffee] focus:outline-none focus:ring-0`}
-                  maskChar={null}
                   value={String(raw) ?? ''}
                   beforeMaskedStateChange={beforeMaskedStateChange}
                   autoFocus

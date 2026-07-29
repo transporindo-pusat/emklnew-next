@@ -2,7 +2,7 @@ import { nullable, z } from 'zod';
 import { dynamicRequiredMessage } from '../utils';
 
 export const blRincianBiayaSchema = z.object({
-  id: z.number().optional(),
+  id: z.string().optional(),
   nobukti: z.string().nullable().optional(),
   bldetail_id: z.number().nullable().optional(),
   bldetail_nobukti: z.string().nullable().optional(),
@@ -25,7 +25,7 @@ export const blRincianBiayaSchema = z.object({
 export type blRincianBiayaInput = z.infer<typeof blRincianBiayaSchema>;
 
 export const blDetailRincianSchema = z.object({
-  id: z.number().optional(),
+  id: z.string().optional(),
 
   nobukti: z.string().nullable().optional(),
   bldetail_id: z.number().nullable().optional(),
@@ -42,7 +42,7 @@ export const blDetailRincianSchema = z.object({
 export type blHeaderDetailRincianInput = z.infer<typeof blDetailRincianSchema>;
 
 export const blDetailSchema = z.object({
-  id: z.number().optional(),
+  id: z.string().optional(),
   nobukti: z.string().nullable().optional(),
 
   bl_id: z.number().nullable().optional(),
@@ -74,7 +74,7 @@ export const blDetailSchema = z.object({
 export type blDetailInput = z.infer<typeof blDetailSchema>;
 
 export const blHeaderSchema = z.object({
-  id: z.number().optional(),
+  id: z.string().optional(),
   nobukti: z.string().nullable().optional(),
 
   shippinginstruction_nobukti: z

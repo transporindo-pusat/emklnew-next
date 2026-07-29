@@ -41,7 +41,11 @@ import {
   isLeapYear,
   parseDateFromDDMMYYYY
 } from '@/lib/utils';
-import InputMask from 'react-input-mask';
+// Fork @mona-health, BUKAN `react-input-mask` lama: yang lama memanggil
+// ReactDOM.findDOMNode yang sudah DIHAPUS di React 19 → "findDOMNode is not a
+// function" begitu komponen ini dirender. Fork ini nol findDOMNode dan sudah
+// jadi standar di 10+ file lain project ini.
+import InputMask from '@mona-health/react-input-mask';
 import LookUp from '@/components/custom-ui/LookUp';
 import { IoMdClose } from 'react-icons/io';
 import { useSelector } from 'react-redux';
@@ -53,6 +57,7 @@ const FormOffdays = ({
   forms,
   onSubmit,
   deleteMode,
+  viewMode,
   handleClose,
   popOverDate,
   setPopOverDate,
@@ -87,23 +92,28 @@ const FormOffdays = ({
       label: 'STATUS AKTIF',
       lookupLabel: 'LOOKUP STATUS AKTIF',
       showOnButton: true,
+      disabled: viewMode,
       postData: 'text'
     }
   ];
   const lookupPropsCabang = [
     {
-      columns: [{ key: 'namacabang', name: 'nama cabang' }],
+      // endpoint /cabang mengembalikan kolom `nama` (lihat selectColumns di
+      // cabang.service). Sebelumnya di sini `namacabang` — kolom yang tak ada
+      // di response — sehingga setiap baris lookup terender KOSONG.
+      columns: [{ key: 'nama', name: 'NAMA CABANG' }],
       // filterby: { class: 'system', method: 'get' },
       required: true,
       labelLookup: 'LOOKUP CABANG',
-      disabled: deleteMode,
+      disabled: deleteMode || viewMode,
       selectedRequired: true,
       endpoint: 'cabang',
       label: 'CABANG',
       singleColumn: true,
       pageSize: 20,
       showOnButton: true,
-      postData: 'namacabang'
+      dataToPost: 'id',
+      postData: 'nama'
     }
   ];
   useEffect(() => {
@@ -239,7 +249,13 @@ const FormOffdays = ({
       <DialogTitle hidden={true}>Title</DialogTitle>
       <DialogContent className="flex h-full min-w-full flex-col overflow-hidden border border-border bg-background">
         <div className="flex items-center justify-between bg-background-form-header px-2 py-2">
-          <h2 className="text-sm font-semibold">Form hari libur</h2>
+          <h2 className="text-sm font-semibold">
+            {viewMode
+              ? 'View hari libur'
+              : deleteMode
+              ? 'Delete hari libur'
+              : 'Form hari libur'}
+          </h2>
           <div
             className="cursor-pointer rounded-md border border-zinc-200 bg-red-500 p-0 hover:bg-red-400"
             onClick={() => {
@@ -275,11 +291,14 @@ const FormOffdays = ({
                             <div className="relative">
                               <InputMask
                                 mask="99-99-9999"
-                                // maskChar="dmy"
-                                maskChar={null} // Tidak menampilkan karakter mask saat input kosong
-                                maskPlaceholder="dd-mm-yyyy"
+                                // Di fork ini `maskChar` bernama `maskPlaceholder`.
+                                // null = tak menampilkan karakter mask saat kosong.
+                                maskPlaceholder={null}
+                                type="text"
+                                readOnly={viewMode}
+                                placeholder="dd-mm-yyyy"
+                                className="h-9 w-full rounded-md border border-zinc-300 p-2 text-zinc-600 focus:outline-none focus:ring-0"
                                 value={field.value ?? ''}
-                                alwaysShowMask={true}
                                 onChange={(e) => {
                                   let rawValue = e.target.value;
                                   let [day, month, year] = rawValue.split('-');
@@ -355,16 +374,7 @@ const FormOffdays = ({
                                     target: { ...e.target, value: rawValue }
                                   });
                                 }}
-                              >
-                                {(inputProps) => (
-                                  <input
-                                    {...inputProps}
-                                    type="text"
-                                    placeholder="dd-mm-yyyy"
-                                    className="h-9 w-full rounded-md border border-zinc-300 p-2 text-zinc-600 focus:outline-none focus:ring-0"
-                                  />
-                                )}
-                              </InputMask>
+                              />
 
                               <Popover
                                 open={popOverDate}
@@ -373,7 +383,8 @@ const FormOffdays = ({
                                 <PopoverTrigger asChild>
                                   <button
                                     type="button"
-                                    className="absolute right-2 top-1/2 -translate-y-1/2 transform cursor-pointer border-none bg-transparent"
+                                    disabled={viewMode}
+                                    className="absolute right-2 top-1/2 -translate-y-1/2 transform cursor-pointer border-none bg-transparent disabled:cursor-not-allowed disabled:opacity-50"
                                   >
                                     <CalendarIcon className="h-5 w-5 text-gray-500" />
                                   </button>
@@ -435,7 +446,7 @@ const FormOffdays = ({
                               {...field}
                               value={field.value ?? ''}
                               className="border border-zinc-300"
-                              readOnly={deleteMode}
+                              readOnly={deleteMode || viewMode}
                             >
                               {field.value}
                             </Textarea>
@@ -493,7 +504,8 @@ const FormOffdays = ({
           </div>
         </div>
         <FormFooterButtons
-          mode={deleteMode ? 'delete' : 'edit'}
+          // mode 'view' membuat FormFooterButtons menonaktifkan tombol SAVE
+          mode={viewMode ? 'view' : deleteMode ? 'delete' : 'edit'}
           onSave={onSubmit}
           onCancel={handleClose}
           isLoadingCreate={isLoadingCreate}

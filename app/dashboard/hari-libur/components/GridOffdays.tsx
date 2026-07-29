@@ -127,6 +127,7 @@ const GridOffdays = () => {
   const [fetchedPages, setFetchedPages] = useState<Set<number>>(new Set([1]));
   const [columnsOrder, setColumnsOrder] = useState<readonly number[]>([]);
   const [deleteMode, setDeleteMode] = useState<boolean>(false);
+  const [viewMode, setViewMode] = useState<boolean>(false);
   const [contextMenu, setContextMenu] = useState<{
     x: number;
     y: number;
@@ -1050,8 +1051,12 @@ const GridOffdays = () => {
       forms.setValue('tgl', rowData.tgl || '');
       forms.setValue('keterangan', rowData.keterangan || '');
       forms.setValue('statusaktif', rowData?.statusaktif ?? '');
+      // tanpa dua baris ini, CABANG kosong saat edit padahal wajib diisi
+      forms.setValue('cabang_id', rowData?.cabang_id ?? '');
+      forms.setValue('cabang_nama', rowData?.cabang_nama ?? '');
       setPopOver(true);
       setDeleteMode(false);
+      setViewMode(false);
       setEditMode(true);
     }
   };
@@ -1062,9 +1067,29 @@ const GridOffdays = () => {
 
       forms.setValue('keterangan', rowData.keterangan || '');
       forms.setValue('statusaktif', rowData?.statusaktif ?? '');
+      forms.setValue('cabang_id', rowData?.cabang_id ?? '');
+      forms.setValue('cabang_nama', rowData?.cabang_nama ?? '');
       setPopOver(true);
       setEditMode(false);
+      setViewMode(false);
       setDeleteMode(true);
+    }
+  };
+
+  // Sama seperti handleEdit tapi form dikunci: mengikuti pola modul
+  // jenis-biaya-marketing (handleView + onView di ActionButton).
+  const handleView = () => {
+    if (selectedRow !== null) {
+      const rowData = rows[selectedRow];
+      forms.setValue('tgl', rowData.tgl || '');
+      forms.setValue('keterangan', rowData.keterangan || '');
+      forms.setValue('statusaktif', rowData?.statusaktif ?? '');
+      forms.setValue('cabang_id', rowData?.cabang_id ?? '');
+      forms.setValue('cabang_nama', rowData?.cabang_nama ?? '');
+      setPopOver(true);
+      setEditMode(false);
+      setDeleteMode(false);
+      setViewMode(true);
     }
   };
 
@@ -1080,7 +1105,7 @@ const GridOffdays = () => {
   const handleClose = () => {
     setPopOver(false);
     setEditMode(false);
-    // setViewMode(false);
+    setViewMode(false);
     setDeleteMode(false);
     forms.reset();
   };
@@ -1088,6 +1113,7 @@ const GridOffdays = () => {
     try {
       setEditMode(false);
       setDeleteMode(false);
+      setViewMode(false);
       setPopOver(true);
       forms.reset();
     } catch (error) {
@@ -1282,6 +1308,7 @@ const GridOffdays = () => {
             onAdd={handleAdd}
             onDelete={handleDelete}
             onEdit={handleEdit}
+            onView={handleView}
             rowsLength={rows.length}
             totalItems={offdays ? offdays.pagination.totalItems : 0}
           />
@@ -1330,6 +1357,7 @@ const GridOffdays = () => {
         popOverDate={popOverDate}
         setPopOverDate={setPopOverDate}
         deleteMode={deleteMode}
+        viewMode={viewMode}
         onSubmit={forms.handleSubmit(onSubmit)}
         isLoadingCreate={isLoadingCreate}
         isLoadingUpdate={isLoadingUpdate}

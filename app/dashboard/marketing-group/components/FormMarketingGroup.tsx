@@ -19,6 +19,7 @@ import { IoMdClose } from 'react-icons/io';
 import { FaSave } from 'react-icons/fa';
 import { useDispatch } from 'react-redux';
 import { setSubmitClicked } from '@/lib/store/lookupSlice/lookupSlice';
+import { useFormError } from '@/lib/hooks/formErrorContext';
 
 const FormMarketingGroup = ({
   popOver,
@@ -68,6 +69,9 @@ const FormMarketingGroup = ({
   const formRef = useRef<HTMLFormElement | null>(null); // Ref untuk form
   const openName = useSelector((state: RootState) => state.lookup.openName);
   const dispatch = useDispatch();
+  // Error 400 dari backend masuk ke context ini; LookUp cuma membaca error
+  // react-hook-form, jadi harus dioper lewat `errorMessage` agar terlihat.
+  const { errors: formErrors } = useFormError();
 
   useEffect(() => {
     // Fungsi untuk menangani pergerakan fokus berdasarkan tombol
@@ -191,6 +195,7 @@ const FormMarketingGroup = ({
                           required={true}
                           inputLookupValue={forms.getValues('marketing_id')}
                           lookupNama={forms.getValues('marketing_nama')}
+                          errorMessage={formErrors?.marketing_id}
                         />
                       ))}
                     </div>
@@ -217,6 +222,7 @@ const FormMarketingGroup = ({
                               required={true}
                               inputLookupValue={forms.getValues('marketing_id')}
                               lookupNama={forms.getValues('marketing_nama')}
+                              errorMessage={formErrors?.marketing_id}
                             />
                           ))}
                           <FormMessage />{' '}
@@ -247,6 +253,7 @@ const FormMarketingGroup = ({
                           required={true}
                           inputLookupValue={forms.getValues('statusaktif')}
                           lookupNama={forms.getValues('statusaktif_text')}
+                          errorMessage={formErrors?.statusaktif}
                         />
                       ))}
                     </div>

@@ -3,7 +3,11 @@ import { z } from 'zod';
 import { dynamicRequiredMessage } from '../utils';
 
 export const AkunpusatSchema = z.object({
-  id: z.number().nullable().optional(),
+  // id/cabang_id/type_id kolomnya TEXT berisi uuid di PG. z.number()/
+  // z.coerce.number() mengubahnya jadi NaN sehingga validasi gagal dan submit
+  // batal tanpa request apa pun ke backend. Hanya `level` yang benar-benar
+  // numerik (bigint).
+  id: z.string().nullable().optional(),
   coa: z.string().min(1, { message: dynamicRequiredMessage('COA') }),
   parent: z.string().nonempty({ message: dynamicRequiredMessage('PARENT') }),
   keterangancoa: z.string().nullable().optional(),
@@ -17,14 +21,14 @@ export const AkunpusatSchema = z.object({
   statusaktif: z
     .string()
     .min(1, { message: dynamicRequiredMessage('STATUS AKTIF') }),
-  cabang_id: z.coerce
-    .number({
+  cabang_id: z
+    .string({
       required_error: dynamicRequiredMessage('CABANG ID'),
       invalid_type_error: dynamicRequiredMessage('CABANG ID')
     })
     .min(1, { message: dynamicRequiredMessage('CABANG ID') }),
-  type_id: z.coerce
-    .number({
+  type_id: z
+    .string({
       required_error: dynamicRequiredMessage('TYPE AKUNTANSI'),
       invalid_type_error: dynamicRequiredMessage('TYPE AKUNTANSI')
     })

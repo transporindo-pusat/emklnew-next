@@ -1708,6 +1708,46 @@ const GridManagerMarketingHeader = () => {
     clearError();
     forms.reset();
   };
+  const statusAktifDefaultRef = useRef<{ id: string; text: string } | null>(
+    null
+  );
+
+  // LookUp hanya MENAMPILKAN default dari redux; nilai `statusaktif` di form
+  // tetap kosong sehingga validasi menolak submit. Jadi id-nya harus
+  // benar-benar diisikan ke form. Hasilnya di-cache agar request cuma sekali.
+  const resetAddForm = async () => {
+    let aktif = statusAktifDefaultRef.current;
+    if (!aktif) {
+      try {
+        const res = await api2.get('/parameter', {
+          params: { grp: 'status aktif' }
+        });
+        const params: any[] = res?.data?.data ?? res?.data ?? [];
+        const row =
+          params.find((p) => p?.default === 'YA') ??
+          params.find((p) => String(p?.text).toUpperCase() === 'AKTIF');
+        aktif = row
+          ? { id: String(row.id), text: row.text ?? 'AKTIF' }
+          : { id: '', text: '' };
+        statusAktifDefaultRef.current = aktif;
+      } catch (e) {
+        console.error('Gagal mengambil default STATUS AKTIF:', e);
+        aktif = { id: '', text: '' };
+      }
+    }
+    forms.reset({
+      nama: '',
+      keterangan: '',
+      minimalprofit: undefined,
+      statusmentor: null,
+      statusleader: null,
+      // `text` adalah teks tampilan LookUp STATUS AKTIF di header
+      statusaktif: aktif.id,
+      text: aktif.text,
+      details: []
+    });
+  };
+
   const handleAdd = async () => {
     try {
       // Jalankan API sinkronisasi
@@ -1715,7 +1755,7 @@ const GridManagerMarketingHeader = () => {
 
       setPopOver(true);
 
-      forms.reset();
+      await resetAddForm();
     } catch (error) {
       console.error('Error syncing ACOS:', error);
     }
@@ -1858,7 +1898,7 @@ const GridManagerMarketingHeader = () => {
   useEffect(() => {
     if (selectedRow !== null && rows.length > 0 && mode !== 'add') {
       const row = rows[selectedRow];
-      forms.setValue('id', Number(row?.id));
+      forms.setValue('id', row?.id);
       forms.setValue('nama', row?.nama);
       forms.setValue('keterangan', row?.keterangan);
       forms.setValue('minimalprofit', formatCurrency(row?.minimalprofit));
@@ -1869,8 +1909,10 @@ const GridManagerMarketingHeader = () => {
       forms.setValue('statusaktif', row?.statusaktif ?? null);
       forms.setValue('text', row?.text ?? null);
       forms.setValue('details', []);
-    } else {
-      // Clear or set defaults when adding a new record
+    } else if (mode !== 'add') {
+      // JANGAN mengosongkan saat mode 'add' — resetAddForm() di handleAdd yang
+      // mengisi default STATUS AKTIF, dan `text` di sini akan menghapusnya lagi
+      // sehingga field terlihat kosong.
       forms.setValue('statusmentor_text', '');
       forms.setValue('statusleader_text', '');
       forms.setValue('text', '');

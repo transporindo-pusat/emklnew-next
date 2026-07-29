@@ -118,7 +118,6 @@ const InputNumeric: React.FC<NumericInputProps> = ({
       <InputMask
         mask=""
         maskPlaceholder={null}
-        maskChar={null}
         disabled={disabled}
         value={inputValue}
         readOnly={readOnly}

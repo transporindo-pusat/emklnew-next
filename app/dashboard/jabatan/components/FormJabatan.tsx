@@ -147,6 +147,10 @@ const FormJabatan = ({
                           }
                           inputLookupValue={forms.getValues('divisi_id')}
                           lookupNama={forms.getValues('divisi')}
+                          // tanpa forms+name, error validasi divisi_id tak punya
+                          // tempat tampil (LookUp bukan FormField) → gagal senyap
+                          forms={forms}
+                          name="divisi_id"
                           disabled={mode === 'view' || mode === 'delete'}
                         />
                       ))}
@@ -196,6 +200,8 @@ const FormJabatan = ({
                           }
                           inputLookupValue={forms.getValues('statusaktif')}
                           lookupNama={forms.getValues('statusaktif_nama')}
+                          forms={forms}
+                          name="statusaktif"
                           disabled={mode === 'view' || mode === 'delete'}
                         />
                       ))}

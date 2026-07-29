@@ -1839,7 +1839,7 @@ const GridBiaya = () => {
   useEffect(() => {
     const rowData = rows[selectedRow];
     if (selectedRow !== null && rows.length > 0 && mode !== 'add') {
-      forms.setValue('id', Number(rowData?.id));
+      forms.setValue('id', rowData?.id);
       forms.setValue('nama', rowData?.nama);
       forms.setValue('keterangan', rowData?.keterangan);
 

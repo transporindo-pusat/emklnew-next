@@ -2,11 +2,11 @@ import { nullable, z } from 'zod';
 import { dynamicRequiredMessage } from '../utils';
 
 export const biayaExtraDetailSchema = z.object({
-  id: z.number().optional(),
+  id: z.string().optional(),
   nobukti: z.string().nullable().optional(),
-  biayaextra_id: z.number().nullable().optional(),
+  biayaextra_id: z.string().nullable().optional(),
 
-  orderanmuatan_id: z.number().nullable().optional(),
+  orderanmuatan_id: z.string().nullable().optional(),
   orderanmuatan_nobukti: z
     .string({ message: dynamicRequiredMessage('ORDERAN MUATAN') })
     .nonempty({ message: dynamicRequiredMessage('ORDERAN MUATAN') }),
@@ -30,7 +30,7 @@ export const biayaExtraDetailSchema = z.object({
   keterangan: z.string().nullable().optional(),
 
   groupbiayaextra_id: z
-    .number({
+    .string({
       required_error: dynamicRequiredMessage('BIAYA EMKL')
     })
     .min(1, { message: dynamicRequiredMessage('BIAYA EMKL') }),
@@ -39,7 +39,7 @@ export const biayaExtraDetailSchema = z.object({
 export type BiayaExtraDetailInput = z.infer<typeof biayaExtraDetailSchema>;
 
 export const biayaExtraHeaderSchema = z.object({
-  id: z.number().optional(),
+  id: z.string().optional(),
   nobukti: z.string().nullable().optional(),
 
   tglbukti: z
@@ -47,14 +47,14 @@ export const biayaExtraHeaderSchema = z.object({
     .nonempty({ message: dynamicRequiredMessage('TGL BUKTI') }),
 
   jenisorder_id: z
-    .number({
+    .string({
       required_error: dynamicRequiredMessage('JENIS ORDER')
     })
     .min(1, { message: dynamicRequiredMessage('JENIS ORDER') }),
   jenisorder_nama: z.string().nullable().optional(),
 
   biayaemkl_id: z
-    .number({
+    .string({
       required_error: dynamicRequiredMessage('BIAYA EMKL')
     })
     .min(1, { message: dynamicRequiredMessage('BIAYA EMKL') }),

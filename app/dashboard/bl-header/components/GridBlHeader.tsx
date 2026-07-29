@@ -2101,7 +2101,7 @@ const GridBlHeader = () => {
     if (selectedRow !== null && rows.length > 0 && mode !== 'add') {
       const rowData = rows[selectedRow];
 
-      forms.setValue('id', Number(rowData?.id));
+      forms.setValue('id', rowData?.id);
       forms.setValue('nobukti', rowData?.nobukti);
       forms.setValue(
         'shippinginstruction_nobukti',

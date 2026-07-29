@@ -20,6 +20,7 @@ import {
 import InputMask from '@mona-health/react-input-mask';
 import InputCurrency from '@/components/custom-ui/InputCurrency';
 import InputDatePicker from '@/components/custom-ui/InputDatePicker';
+import { useFormError } from '@/lib/hooks/formErrorContext';
 
 const FormSupplier = ({
   forms,
@@ -35,6 +36,10 @@ const FormSupplier = ({
   const dispatch = useDispatch();
   const formRef = useRef<HTMLFormElement | null>(null);
   const openName = useSelector((state: RootState) => state.lookup.openName);
+  // Error dari backend (mis. "COA Piutang dan COA Giro tidak boleh sama")
+  // masuk ke context ini. LookUp hanya membaca error react-hook-form, jadi
+  // tanpa dioper lewat `errorMessage` pesannya tak pernah muncul di layar.
+  const { errors: formErrors } = useFormError();
 
   const lookupPropsStatusAktif = [
     {
@@ -402,6 +407,7 @@ const FormSupplier = ({
                           name="coa"
                           forms={forms}
                           lookupNama={forms.getValues('coa_nama')}
+                          errorMessage={formErrors?.coa}
                         />
                       ))}
                     </div>
@@ -430,6 +436,7 @@ const FormSupplier = ({
                           name="coapiu"
                           forms={forms}
                           lookupNama={forms.getValues('coapiu_nama')}
+                          errorMessage={formErrors?.coapiu}
                         />
                       ))}
                     </div>
@@ -458,6 +465,7 @@ const FormSupplier = ({
                           name="coahut"
                           forms={forms}
                           lookupNama={forms.getValues('coahut_nama')}
+                          errorMessage={formErrors?.coahut}
                         />
                       ))}
                     </div>
@@ -486,6 +494,7 @@ const FormSupplier = ({
                           name="coagiro"
                           forms={forms}
                           lookupNama={forms.getValues('coagiro_nama')}
+                          errorMessage={formErrors?.coagiro}
                         />
                       ))}
                     </div>

@@ -1444,7 +1444,7 @@ const GridDaftarBank = () => {
       rows.length > 0 &&
       mode !== 'add' // Only fill the form if not in addMode
     ) {
-      forms.setValue('id', Number(rowData?.id));
+      forms.setValue('id', rowData?.id);
       forms.setValue('nama', rowData?.nama);
       forms.setValue('keterangan', rowData?.keterangan);
       forms.setValue('statusaktif', rowData?.statusaktif ?? '');

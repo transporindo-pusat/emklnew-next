@@ -159,18 +159,18 @@ const FormBiayaExtraHeader = ({
 
   const addRow = () => {
     const newRow: Partial<BiayaExtraMuatanDetail> & { isNew: boolean } = {
-      id: 0,
+      id: '',
       nobukti: '',
-      biayaextra_id: 0,
-      orderanmuatan_id: 0,
+      biayaextra_id: '',
+      orderanmuatan_id: '',
       orderanmuatan_nobukti: '',
       estimasi: '',
       // nominal: '',
-      statustagih: 0,
+      statustagih: '',
       statustagih_nama: '',
       nominaltagih: '',
       keterangan: '',
-      groupbiayaextra_id: 0,
+      groupbiayaextra_id: '',
       groupbiayaextra_nama: '',
       isNew: true
     };
@@ -247,7 +247,7 @@ const FormBiayaExtraHeader = ({
 
           // Otherwise, render the delete button for rows with data
           const rowIndex = rows.findIndex(
-            (row) => Number(row.id) === Number(props.row.id)
+            (row) => String(row.id) === String(props.row.id)
           );
           return (
             <div className="m-0 flex h-full w-full cursor-pointer items-center justify-center p-0 text-xs">
@@ -578,7 +578,7 @@ const FormBiayaExtraHeader = ({
                         ? String(props.row.groupbiayaextra_nama)
                         : undefined
                     }
-                    inputLookupValue={Number(props.row.groupbiayaextra_id)}
+                    inputLookupValue={props.row.groupbiayaextra_id}
                   />
                 ))}
           </div>
@@ -666,18 +666,18 @@ const FormBiayaExtraHeader = ({
       if (allDataDetail?.data?.length > 0 && mode !== 'add') {
         // Format data detail utama (tanpa rincian)
         const formattedRows = allDataDetail.data.map((item: any) => ({
-          id: Number(item.id),
+          id: item.id,
           nobukti: item.nobukti ?? '',
-          biayaextra_id: Number(item.biayaextra_id),
-          orderanmuatan_id: item.orderanmuatan_id ?? 0,
+          biayaextra_id: item.biayaextra_id,
+          orderanmuatan_id: item.orderanmuatan_id ?? '',
           orderanmuatan_nobukti: item.orderanmuatan_nobukti ?? '',
           estimasi: formatCurrency(item.estimasi) ?? '',
           // nominal: formatCurrency(item.nominal) ?? '',
-          statustagih: Number(item.statustagih) ?? '',
+          statustagih: item.statustagih ?? '',
           statustagih_nama: item.statustagih_nama ?? '',
           nominaltagih: formatCurrency(item.nominaltagih) ?? '',
           keterangan: item.keterangan ?? '',
-          groupbiayaextra_id: Number(item.groupbiayaextra_id) ?? 0,
+          groupbiayaextra_id: item.groupbiayaextra_id ?? '',
           groupbiayaextra_nama: item.groupbiayaextra_nama ?? '',
           isNew: false
         }));
@@ -690,18 +690,18 @@ const FormBiayaExtraHeader = ({
         setRows([
           // If no data, add one editable row and the "Add Row" button row at the end
           {
-            id: 0,
+            id: '',
             nobukti: '',
-            biayaextra_id: 0,
-            orderanmuatan_id: 0,
+            biayaextra_id: '',
+            orderanmuatan_id: '',
             orderanmuatan_nobukti: '',
             estimasi: '',
             // nominal: '',
-            statustagih: 0,
+            statustagih: '',
             statustagih_nama: '',
             nominaltagih: '',
             keterangan: '',
-            groupbiayaextra_id: 0,
+            groupbiayaextra_id: '',
             groupbiayaextra_nama: '',
             isNew: true
           },
@@ -734,18 +734,18 @@ const FormBiayaExtraHeader = ({
   //   if (forms.getValues()?.details?.length === 0) {
   //     setRows([
   //       {
-  //         id: 0,
+  //         id: '',
   //         nobukti: '',
-  //         biayaextra_id: 0,
+  //         biayaextra_id: '',
   //         orderanmnuatan_id: '',
   //         orderanmuatan_nobukti: '',
   //         estimasi: '',
   //         nominal: '',
-  //         statustagih: 0,
+  //         statustagih: '',
   //         statustagih_nama: '',
   //         nominaltagih: '',
   //         keterangan: '',
-  //         groupbiayaextra_id: 0,
+  //         groupbiayaextra_id: '',
   //         groupbiayaextra_nama: '',
   //         isNew: true
   //       },
@@ -857,7 +857,7 @@ const FormBiayaExtraHeader = ({
                               key={index}
                               {...props}
                               lookupValue={(value: any) => {
-                                forms.setValue('jenisorder_id', Number(value));
+                                forms.setValue('jenisorder_id', value);
                               }}
                               onSelectRow={(val) => {
                                 forms.setValue('jenisorder_nama', val?.nama);
@@ -890,7 +890,7 @@ const FormBiayaExtraHeader = ({
                               {...props}
                               disabled={mode == 'delete' || mode == 'view'}
                               lookupValue={(value: any) => {
-                                forms.setValue('biayaemkl_id', Number(value));
+                                forms.setValue('biayaemkl_id', value);
                               }}
                               onSelectRow={(val) => {
                                 forms.setValue('biayaemkl_nama', val?.nama);

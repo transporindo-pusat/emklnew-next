@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { dynamicRequiredMessage } from '../utils';
 
 export const GroupbiayaextraSchema = z.object({
-  id: z.number().nullable().optional(),
+  id: z.string().nullable().optional(),
   keterangan: z
     .string()
     .nonempty({ message: dynamicRequiredMessage('KETERANGAN') }),

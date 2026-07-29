@@ -1859,12 +1859,12 @@ const GridBiayaExtraHeader = () => {
     if (selectedRow !== null && rows.length > 0 && mode !== 'add') {
       const rowData = rows[selectedRow];
 
-      forms.setValue('id', Number(rowData?.id));
+      forms.setValue('id', rowData?.id);
       forms.setValue('nobukti', rowData?.nobukti);
       forms.setValue('tglbukti', rowData?.tglbukti);
-      forms.setValue('jenisorder_id', Number(rowData?.jenisorder_id));
+      forms.setValue('jenisorder_id', rowData?.jenisorder_id);
       forms.setValue('jenisorder_nama', rowData?.jenisorder_nama);
-      forms.setValue('biayaemkl_id', Number(rowData?.biayaemkl_id));
+      forms.setValue('biayaemkl_id', rowData?.biayaemkl_id);
       forms.setValue('biayaemkl_nama', rowData?.biayaemkl_nama);
       forms.setValue('keterangan', rowData?.keterangan);
     } else {
@@ -1875,7 +1875,7 @@ const GridBiayaExtraHeader = () => {
         filtersJenisOrderan = JENISORDERMUATAN;
         filtersJenisOrderanNama = JENISORDERMUATANNAMA;
       }
-      forms.setValue('jenisorder_id', Number(filtersJenisOrderan));
+      forms.setValue('jenisorder_id', filtersJenisOrderan);
       forms.setValue('jenisorder_nama', filtersJenisOrderanNama);
     }
   }, [forms, selectedRow, rows, mode, popOver]);

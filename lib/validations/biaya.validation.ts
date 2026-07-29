@@ -3,7 +3,7 @@ import { REQUIRED_FIELD } from '@/constants/validation';
 import { dynamicRequiredMessage } from '../utils';
 
 export const BiayaSchema = z.object({
-  id: z.number().nullable().optional(),
+  id: z.string().nullable().optional(),
   nama: z.string().nonempty({ message: dynamicRequiredMessage('NAMA') }),
   keterangan: z
     .string()

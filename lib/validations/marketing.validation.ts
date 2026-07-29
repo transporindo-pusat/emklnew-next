@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { dynamicRequiredMessage } from '../utils';
 
 export const marketingOrderanSchema = z.object({
-  id: z.number().optional(),
+  id: z.union([z.string(), z.number()]).nullable().optional(),
   nama: z.string().nullable(),
   keterangan: z.string().nullable(),
   singkatan: z.string().nullable(),
@@ -10,9 +10,15 @@ export const marketingOrderanSchema = z.object({
   statusaktifOrderan_nama: z.string().nullable().optional()
 });
 
+// Semua *_id di tabel detail bertipe TEXT di PG (jenisbiayamarketing_id,
+// managermarketing_id, jenisprosesfee_id). z.number() menolak nilai dari LookUp
+// yang berupa string sehingga handleSubmit gagal diam-diam — tombol SAVE
+// terasa tak bereaksi dan tak ada request sama sekali ke backend.
+const detailId = z.union([z.string(), z.number()]).nullable().optional();
+
 export const marketingBiayaSchema = z.object({
-  id: z.number().optional(),
-  jenisbiayamarketing_id: z.number().nullable(),
+  id: detailId,
+  jenisbiayamarketing_id: z.string().nullable(),
   jenisbiayamarketing_nama: z.string().nullable().optional(),
   nominal: z.string().nullable(),
   statusaktif: z.string().nullable(),
@@ -20,16 +26,16 @@ export const marketingBiayaSchema = z.object({
 });
 
 export const marketingManagerSchema = z.object({
-  id: z.number().optional(),
-  managermarketing_id: z.number().nullable(),
+  id: detailId,
+  managermarketing_id: z.string().nullable(),
   managermarketing_nama: z.string().nullable().optional(),
   statusaktif: z.string().nullable(),
   statusaktifManager_nama: z.string().nullable().optional()
 });
 
 export const marketingProsesFeeSchema = z.object({
-  id: z.number().optional(),
-  jenisprosesfee_id: z.number().nullable(),
+  id: detailId,
+  jenisprosesfee_id: z.string().nullable(),
   jenisprosesfee_nama: z.string().nullable().optional(),
   statuspotongbiayakantor: z.string().nullable(),
   statuspotongbiayakantor_nama: z.string().nullable().optional(),
@@ -57,10 +63,8 @@ export const marketingSchema = z.object({
     })
     .nonempty({ message: dynamicRequiredMessage('EMAIL') })
     .email({ message: 'Email must be a valid email address' }),
-  // karyawan_id = varchar(200) UUID, bukan number.
-  karyawan_id: z
-    .string()
-    .min(1, { message: dynamicRequiredMessage('KARYAWAN') }),
+  // karyawan_id = varchar(200) UUID, bukan number. TIDAK wajib diisi.
+  karyawan_id: z.string().nullable().optional(),
   karyawan_nama: z.string().nullable().optional(),
   tglmasuk: z
     .string({
@@ -80,11 +84,9 @@ export const marketingSchema = z.object({
   statusfeemanager: z.string()
     .min(1, { message: dynamicRequiredMessage('STATUS FEE MANAGER') }),
   statusfeemanager_nama: z.string().nullable().optional(),
-  // marketinggroup_id: z.number().nullable(),
-  marketinggroup_id: z
-    .number()
-    .int({ message: dynamicRequiredMessage('MARKETING GROUP') })
-    .min(1, { message: dynamicRequiredMessage('MARKETING GROUP') }),
+  // TIDAK wajib diisi. Tipenya string (DTO backend juga z.string().nullable());
+  // z.number() lama akan mengirim number dan ditolak backend.
+  marketinggroup_id: z.string().nullable().optional(),
   marketinggroup_nama: z.string().nullable().optional(),
   // statusprafee: z.string().nullable(),
   statusprafee: z.string()
@@ -115,9 +117,10 @@ export const detailsSchema = z.object({
 });
 
 export const marketingdetailSchema = z.object({
-  marketing_id: z.number().nullable(),
+  // sama seperti di atas: kedua kolom bertipe TEXT di PG
+  marketing_id: z.string().nullable(),
   marketing_nama: z.string().nullable().optional(),
-  marketingprosesfee_id: z.number().nullable(),
+  marketingprosesfee_id: z.string().nullable(),
   jenisprosesfee_nama: z.string().nullable().optional(),
   statuspotongbiayakantor_nama: z.string().nullable().optional(),
   statusaktif_nama: z.string().nullable().optional(),

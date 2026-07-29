@@ -178,7 +178,7 @@ const FormPengeluaranEmkl = ({
         { key: 'keterangancoa', name: 'KETERANGAN COA' }
       ],
       labelLookup: 'COA BANK DEBET LOOKUP',
-      required: true,
+      required: false,
       selectedRequired: false,
       endpoint: 'akunpusat',
       label: 'COA_BANK_DEBET',
@@ -198,7 +198,7 @@ const FormPengeluaranEmkl = ({
         { key: 'keterangancoa', name: 'KETERANGAN COA' }
       ],
       labelLookup: 'COA BANK KREDIT LOOKUP',
-      required: true,
+      required: false,
       selectedRequired: false,
       endpoint: 'akunpusat',
       label: 'COA_BANK_KREDIT',
@@ -218,7 +218,7 @@ const FormPengeluaranEmkl = ({
         { key: 'keterangancoa', name: 'KETERANGAN COA' }
       ],
       labelLookup: 'COA HUTANG DEBET LOOKUP',
-      required: true,
+      required: false,
       selectedRequired: false,
       endpoint: 'akunpusat',
       label: 'COA_HUTANG_DEBET',
@@ -238,7 +238,7 @@ const FormPengeluaranEmkl = ({
         { key: 'keterangancoa', name: 'KETERANGAN COA' }
       ],
       labelLookup: 'COA HUTANG KREDIT LOOKUP',
-      required: true,
+      required: false,
       selectedRequired: false,
       endpoint: 'akunpusat',
       label: 'COA_HUTANG_KREDIT',
@@ -258,7 +258,7 @@ const FormPengeluaranEmkl = ({
         { key: 'keterangancoa', name: 'KETERANGAN COA' }
       ],
       labelLookup: 'COA PROSES LOOKUP',
-      required: true,
+      required: false,
       selectedRequired: false,
       endpoint: 'akunpusat',
       label: 'COA_PROSES',

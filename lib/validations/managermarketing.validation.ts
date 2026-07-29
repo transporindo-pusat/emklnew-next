@@ -21,7 +21,7 @@ export type ManagerMarketingDetailInput = z.infer<
 >;
 
 export const managermarketingHeaderSchema = z.object({
-  id: z.number().nullable().optional(),
+  id: z.string().nullable().optional(),
   nama: z.string().nonempty({ message: dynamicRequiredMessage('NAMA') }),
   keterangan: z
     .string()
@@ -34,7 +34,16 @@ export const managermarketingHeaderSchema = z.object({
     })
     .refine((val) => val !== 'undefined' && val.trim() !== '', {
       message: dynamicRequiredMessage('MINIMAL PROFIT')
-    }),
+    })
+    // InputCurrency mengirim string berformat ribuan ("10,000"), jadi pemisah
+    // ribuan dibuang dulu sebelum dibandingkan sebagai angka.
+    .refine(
+      (val) => {
+        const angka = Number(String(val).replace(/,/g, ''));
+        return !Number.isNaN(angka) && angka >= 0;
+      },
+      { message: 'MINIMAL PROFIT TIDAK BOLEH KURANG DARI 0' }
+    ),
   statusmentor: z.string().nullable(),
   statusmentor_text: z.string().nullable().optional(),
   statusleader: z.string().nullable(),

@@ -2,7 +2,7 @@ import { nullable, z } from 'zod';
 import { dynamicRequiredMessage } from '../utils';
 
 export const estimasiBiayaDetailInvoiceSchema = z.object({
-  id: z.number().optional(),
+  id: z.string().optional(),
   nobukti: z.string().nullable().optional(),
   estimasibiaya_id: z.number().nullable().optional(),
 
@@ -19,7 +19,7 @@ export type estimasiBiayaDetailInvoiceInput = z.infer<
 >;
 
 export const estimasiBiayaDetailBiayaSchema = z.object({
-  id: z.number().optional(),
+  id: z.string().optional(),
   nobukti: z.string().nullable().optional(),
   estimasibiaya_id: z.number().nullable().optional(),
 
@@ -40,7 +40,7 @@ export type estimasiBiayaDetailBiayaInput = z.infer<
 >;
 
 export const estimasiBiayaHeaderSchema = z.object({
-  id: z.number().optional(),
+  id: z.string().optional(),
   nobukti: z.string().nullable().optional(),
 
   tglbukti: z

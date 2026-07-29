@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { dynamicRequiredMessage } from '../utils';
 
 export const supplierSchema = z.object({
-  id: z.number().nullable().optional(),
+  id: z.string().nullable().optional(),
   nama: z.string().min(1, { message: dynamicRequiredMessage('NAMA') }),
   keterangan: z
     .string({ message: dynamicRequiredMessage('KETERANGAN') })

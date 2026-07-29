@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { dynamicRequiredMessage } from '../utils';
 
 export const labaRugiKalkulasiSchema = z.object({
-  id: z.number().nullable().optional(),
+  id: z.string().nullable().optional(),
   periode: z.string().nonempty({ message: dynamicRequiredMessage('PERIODE') }),
 
   estkomisimarketing: z.string().nullable().optional(),

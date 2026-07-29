@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { dynamicRequiredMessage } from '../utils';
 
 export const shippingInstructionDetailRincianSchema = z.object({
-  id: z.number().optional(),
+  id: z.string().optional(),
 
   idOrderan: z.number().optional(),
 
@@ -21,7 +21,7 @@ export type shippingInstructionHeaderDetailRincianInput = z.infer<
 >;
 
 export const shippingInstructionDetailSchema = z.object({
-  id: z.number().optional(),
+  id: z.string().optional(),
   orderan_id: z.number().optional(),
 
   daftarbl_id: z
@@ -90,7 +90,7 @@ export type shippingInstructionHeaderDetailInput = z.infer<
 >;
 
 export const shippingInstructionHeaderSchema = z.object({
-  id: z.number().optional(),
+  id: z.string().optional(),
   nobukti: z.string().nullable().optional(),
 
   tglbukti: z

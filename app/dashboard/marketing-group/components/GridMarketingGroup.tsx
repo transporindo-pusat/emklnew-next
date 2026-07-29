@@ -1523,8 +1523,10 @@ const GridMarketingGroup = () => {
       rows.length > 0 &&
       mode !== 'add' // Only fill the form if not in addMode
     ) {
-      forms.setValue('id', Number(rowData?.id));
-      forms.setValue('marketing_id', Number(rowData?.marketing_id) || 1);
+      forms.setValue('id', rowData?.id);
+      // kolomnya TEXT — Number() mengubahnya jadi number dan ditolak DTO
+      // backend (z.string()) dengan 400 yang tak tampil di layar
+      forms.setValue('marketing_id', String(rowData?.marketing_id ?? ''));
       forms.setValue('marketing_nama', rowData?.marketing_nama || '');
       forms.setValue('statusaktif', rowData?.statusaktif ?? '');
       forms.setValue('statusaktif_text', rowData?.statusaktif_text || '');

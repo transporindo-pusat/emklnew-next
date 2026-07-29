@@ -2389,7 +2389,7 @@ const GridLabaRugiKalkulasi = () => {
     const rowData = rows[selectedRow];
 
     if (selectedRow !== null && rows.length > 0 && mode !== 'add') {
-      forms.setValue('id', Number(rowData?.id));
+      forms.setValue('id', rowData?.id);
       forms.setValue('periode', rowData?.periode);
       forms.setValue(
         'estkomisimarketing',

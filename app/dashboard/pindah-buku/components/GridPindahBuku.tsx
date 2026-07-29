@@ -2219,7 +2219,7 @@ const GridPindahBuku = () => {
   useEffect(() => {
     const rowData = rows[selectedRow];
     if (selectedRow !== null && rows.length > 0 && mode !== 'add') {
-      // forms.setValue('id', Number(rowData?.id));
+      // forms.setValue('id', rowData?.id);
       forms.setValue('nobukti', rowData?.nobukti);
       forms.setValue('tglbukti', rowData?.tglbukti);
       forms.setValue('bankdari_id', Number(rowData?.bankdari_id));

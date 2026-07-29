@@ -847,10 +847,45 @@ const GridJenisProsesFee = () => {
     }));
   }, [orderedColumns, columnsWidth]);
 
+  const statusAktifDefaultRef = useRef<{ id: string; text: string } | null>(
+    null
+  );
+
+  // LookUp hanya MENAMPILKAN default dari redux; nilai `statusaktif` di form
+  // tetap kosong sehingga validasi menolak submit. Jadi id-nya harus benar-benar
+  // diisikan ke form. Hasilnya di-cache agar request cuma sekali per sesi.
+  const resetAddForm = async () => {
+    let aktif = statusAktifDefaultRef.current;
+    if (!aktif) {
+      try {
+        const res = await api2.get('/parameter', {
+          params: { grp: 'status aktif' }
+        });
+        const params: any[] = res?.data?.data ?? res?.data ?? [];
+        const row =
+          params.find((p) => p?.default === 'YA') ??
+          params.find((p) => String(p?.text).toUpperCase() === 'AKTIF');
+        aktif = row
+          ? { id: String(row.id), text: row.text ?? 'AKTIF' }
+          : { id: '', text: '' };
+        statusAktifDefaultRef.current = aktif;
+      } catch (e) {
+        console.error('Gagal mengambil default STATUS AKTIF:', e);
+        aktif = { id: '', text: '' };
+      }
+    }
+    forms.reset({
+      nama: '',
+      keterangan: '',
+      statusaktif: aktif.id,
+      statusaktif_nama: aktif.text
+    });
+  };
+
   const handleAdd = async () => {
     setPopOver(true);
     setMode('add');
-    forms.reset();
+    await resetAddForm();
   };
 
   const handleEdit = async () => {
@@ -1470,15 +1505,16 @@ const GridJenisProsesFee = () => {
     const rowData = rows[selectedRow];
 
     if (selectedRow !== null && rows.length > 0 && mode !== 'add') {
-      forms.setValue('id', Number(rowData?.id));
+      forms.setValue('id', rowData?.id);
       forms.setValue('nama', rowData?.nama);
       forms.setValue('keterangan', rowData?.keterangan);
       forms.setValue('statusaktif', rowData?.statusaktif ?? '');
       forms.setValue('statusaktif_nama', rowData?.statusaktif_nama || '');
-    } else if (selectedRow !== null && rows.length > 0 && mode === 'add') {
-      forms.setValue('id', 0);
-      forms.setValue('statusaktif_nama', '');
     }
+    // JANGAN set/reset form saat mode 'add' di sini — resetAddForm() di
+    // handleAdd yang menanganinya. Cabang lama menimpa `statusaktif_nama`
+    // dengan '' (menghapus default AKTIF) dan mengisi `id` dengan angka 0,
+    // padahal skemanya z.string() → submit ADD gagal tanpa pesan.
   }, [forms, selectedRow, rows, mode]);
 
   useEffect(() => {

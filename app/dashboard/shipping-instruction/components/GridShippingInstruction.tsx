@@ -2056,7 +2056,7 @@ const GridShippingInstruction = () => {
     if (selectedRow !== null && rows.length > 0 && mode !== 'add') {
       const rowData = rows[selectedRow];
 
-      forms.setValue('id', Number(rowData?.id));
+      forms.setValue('id', rowData?.id);
       forms.setValue('nobukti', rowData?.nobukti);
       forms.setValue('tglbukti', rowData?.tglbukti);
       forms.setValue('schedule_id', Number(rowData?.schedule_id));

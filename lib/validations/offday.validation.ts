@@ -19,6 +19,10 @@ export const offdaysSchema = z.object({
     .string()
     .nonempty({ message: dynamicRequiredMessage('KETERANGAN') }),
   statusaktif: z.string().nullable().optional(), // Email wajib diisi
-  cabang_id: z.number().nullable().optional() // Email wajib diisi
+  // cabang_id itu uuid TEXT (harilibur.cabang_id), bukan angka. Dengan
+  // z.number() nilai dari LookUp selalu ditolak sehingga SAVE batal diam-diam.
+  cabang_id: z.string().nullable().optional(),
+  // teks tampilan LookUp; dibuang service backend agar tak ikut ke INSERT
+  cabang_nama: z.string().nullable().optional()
 });
 export type OffdayInput = z.infer<typeof offdaysSchema>;

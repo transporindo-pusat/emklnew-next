@@ -1168,10 +1168,49 @@ const GridAkunPusat = () => {
     filters.filters
   ]);
 
+  const statusAktifDefaultRef = useRef<{ id: string; text: string } | null>(
+    null
+  );
+
+  // LookUp memang MENAMPILKAN "AKTIF" dari default di redux, tapi itu cuma
+  // teks — nilai `statusaktif` di form tetap undefined sehingga validasi
+  // menolak submit. Jadi id-nya harus benar-benar diisikan ke form.
+  const resetAddForm = async () => {
+    let aktif = statusAktifDefaultRef.current;
+    if (!aktif) {
+      try {
+        const res = await api2.get('/parameter', {
+          params: { grp: 'status aktif' }
+        });
+        const params: any[] = res?.data?.data ?? res?.data ?? [];
+        const row =
+          params.find((p) => p?.default === 'YA') ??
+          params.find((p) => String(p?.text).toUpperCase() === 'AKTIF');
+        aktif = row
+          ? { id: String(row.id), text: row.text ?? 'AKTIF' }
+          : { id: '', text: '' };
+        statusAktifDefaultRef.current = aktif;
+      } catch (e) {
+        console.error('Gagal mengambil default STATUS AKTIF:', e);
+        aktif = { id: '', text: '' };
+      }
+    }
+    forms.reset({
+      type_id: undefined,
+      level: undefined,
+      coa: '',
+      keterangancoa: null,
+      parent: '',
+      cabang_id: undefined,
+      statusaktif: aktif.id,
+      statusaktif_nama: aktif.text
+    });
+  };
+
   const handleAdd = async () => {
     setPopOver(true);
     setMode('add');
-    forms.reset();
+    await resetAddForm();
   };
 
   const handleEdit = async () => {
@@ -2030,12 +2069,21 @@ const GridAkunPusat = () => {
   ]);
   useEffect(() => {
     const combinedRows: IAkunpusat[] = [];
+    // Jaring pengaman: id yang sama tak boleh masuk dua kali. Penyebab utamanya
+    // (ORDER BY tanpa tiebreaker di backend) sudah diperbaiki, tapi baris masih
+    // bisa berpindah halaman kalau data berubah di antara dua fetch — dan id
+    // ganda membuat React melempar "two children with the same key".
+    const seenIds = new Set<string>();
 
     // Combine semua page yang visible
     visiblePages?.forEach((page) => {
       const pageData = pageDataCache.get(page);
       if (pageData) {
-        combinedRows.push(...pageData);
+        pageData.forEach((row) => {
+          if (seenIds.has(row.id)) return;
+          seenIds.add(row.id);
+          combinedRows.push(row);
+        });
       }
     });
 
