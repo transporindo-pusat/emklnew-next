@@ -21,6 +21,7 @@ import { formatCurrency } from '@/lib/utils';
 import InputNumeric from '@/components/custom-ui/InputNumeric';
 import InputMask from '@mona-health/react-input-mask';
 import usePendingLookups from '@/hooks/use-pending-lookups';
+import { useFormError } from '@/lib/hooks/formErrorContext';
 
 interface FormShipperProps {
   popOver: boolean;
@@ -45,6 +46,10 @@ const FormShipper = ({
   isLoadingUpdate,
   isLoadingDelete
 }: FormShipperProps) => {
+  // Error backend (mis. "tidak boleh sama") ditaruh di formErrorContext, BUKAN
+  // di forms.formState.errors — jadi LookUp tak bisa membacanya sendiri.
+  // Ambil di sini lalu teruskan ke prop `errorMessage` tiap LookUp COA.
+  const { errors: formErrors } = useFormError();
   const lookUpPropsShipperAsal = [
     {
       columns: [{ key: 'nama', name: 'SHIPPER ASAL' }],
@@ -343,6 +348,7 @@ const FormShipper = ({
                           name="coa"
                           forms={forms}
                           lookupNama={forms.getValues('coa_text')}
+                          errorMessage={formErrors?.coa}
                           disabled={['view', 'delete'].includes(mode)}
                         />
                       ))}
@@ -369,6 +375,7 @@ const FormShipper = ({
                           name="coapiutang"
                           forms={forms}
                           lookupNama={forms.getValues('coapiutang_text')}
+                          errorMessage={formErrors?.coapiutang}
                           disabled={['view', 'delete'].includes(mode)}
                         />
                       ))}
@@ -395,6 +402,7 @@ const FormShipper = ({
                           name="coahutang"
                           forms={forms}
                           lookupNama={forms.getValues('coahutang_text')}
+                          errorMessage={formErrors?.coahutang}
                           disabled={['view', 'delete'].includes(mode)}
                         />
                       ))}
@@ -687,6 +695,7 @@ const FormShipper = ({
                           name="coagiro"
                           forms={forms}
                           lookupNama={forms.getValues('coagiro_text')}
+                          errorMessage={formErrors?.coagiro}
                           disabled={['view', 'delete'].includes(mode)}
                         />
                       ))}

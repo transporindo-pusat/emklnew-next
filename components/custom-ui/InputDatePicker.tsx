@@ -87,7 +87,7 @@ const InputDatePicker: React.FC<DateInputProps> = ({
         maskPlaceholder="DD-MM-YYYY"
         placeholder="DD-MM-YYYY"
         alwaysShowMask
-        value={value}
+        value={value ?? ''}
         onChange={onChange}
         readOnly={readOnly}
         beforeMaskedStateChange={({

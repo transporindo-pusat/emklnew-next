@@ -508,9 +508,12 @@ const GridRelasi = () => {
             </div>
             <div className="relative h-[50%] w-full px-1">
               <Select
-                defaultValue=""
+                defaultValue="all"
                 onValueChange={(value: any) => {
-                  handleColumnFilterChange('statusrelasi_text', value);
+                  handleColumnFilterChange(
+                    'statusrelasi_text',
+                    value === 'all' ? '' : value
+                  );
                 }}
               >
                 <SelectTrigger className="filter-select z-[999999] mr-1 h-8 w-full cursor-pointer rounded-none border border-gray-300 p-1 text-xs font-thin">
@@ -518,7 +521,7 @@ const GridRelasi = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectGroup>
-                    <SelectItem className="text=xs cursor-pointer" value="">
+                    <SelectItem className="text=xs cursor-pointer" value="all">
                       <p className="text-sm font-normal">all</p>
                     </SelectItem>
                     <SelectItem className="text=xs cursor-pointer" value="EMKL">

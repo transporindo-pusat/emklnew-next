@@ -119,6 +119,10 @@ const FormMarketing = ({
 
   const lookupPropsStatusAktifOrderan = [
     {
+      // side 'bottom' WAJIB untuk LookUp di dalam grid: tanpa prop ini
+      // avoidCollisions aktif dan popover membalik ke ATAS saat ruang di bawah
+      // kurang, sehingga daftarnya menutupi header kolom grid.
+      side: 'bottom' as const,
       columns: [{ key: 'text', name: 'NAMA' }],
       labelLookup: 'STATUS AKTIF LOOKUP',
       required: true,
@@ -135,6 +139,10 @@ const FormMarketing = ({
 
   const lookupPropsStatusAktifBiaya = [
     {
+      // side 'bottom' WAJIB untuk LookUp di dalam grid: tanpa prop ini
+      // avoidCollisions aktif dan popover membalik ke ATAS saat ruang di bawah
+      // kurang, sehingga daftarnya menutupi header kolom grid.
+      side: 'bottom' as const,
       columns: [{ key: 'text', name: 'NAMA' }],
       labelLookup: 'STATUS AKTIF LOOKUP',
       required: true,
@@ -151,6 +159,10 @@ const FormMarketing = ({
 
   const lookupPropsStatusAktifManager = [
     {
+      // side 'bottom' WAJIB untuk LookUp di dalam grid: tanpa prop ini
+      // avoidCollisions aktif dan popover membalik ke ATAS saat ruang di bawah
+      // kurang, sehingga daftarnya menutupi header kolom grid.
+      side: 'bottom' as const,
       columns: [{ key: 'text', name: 'NAMA' }],
       labelLookup: 'STATUS AKTIF LOOKUP',
       required: true,
@@ -167,6 +179,10 @@ const FormMarketing = ({
 
   const lookupPropsStatusAktifProsesFee = [
     {
+      // side 'bottom' WAJIB untuk LookUp di dalam grid: tanpa prop ini
+      // avoidCollisions aktif dan popover membalik ke ATAS saat ruang di bawah
+      // kurang, sehingga daftarnya menutupi header kolom grid.
+      side: 'bottom' as const,
       columns: [{ key: 'text', name: 'NAMA' }],
       labelLookup: 'STATUS AKTIF LOOKUP',
       required: true,
@@ -185,7 +201,8 @@ const FormMarketing = ({
     {
       columns: [{ key: 'namakaryawan', name: 'NAMA KARYAWAN' }],
       labelLookup: 'KARYAWAN LOOKUP',
-      required: true,
+      // boleh kosong — `required: true` yang memunculkan "KARYAWAN WAJIB DIISI"
+      required: false,
       selectedRequired: false,
       endpoint: 'marketing/getLookupKaryawan',
       label: 'KARYAWAN',
@@ -249,7 +266,8 @@ const FormMarketing = ({
     {
       columns: [{ key: 'marketing_nama', name: 'NAMA' }],
       labelLookup: 'MARKETING GROUP LOOKUP',
-      required: true,
+      // boleh kosong
+      required: false,
       selectedRequired: false,
       endpoint: 'marketinggroup',
       label: 'MARKETING GROUP',
@@ -279,6 +297,10 @@ const FormMarketing = ({
 
   const lookupPropsJenisBiayaMarketing = [
     {
+      // side 'bottom' WAJIB untuk LookUp di dalam grid: tanpa prop ini
+      // avoidCollisions aktif dan popover membalik ke ATAS saat ruang di bawah
+      // kurang, sehingga daftarnya menutupi header kolom grid.
+      side: 'bottom' as const,
       columns: [{ key: 'nama', name: 'NAMA' }],
       labelLookup: 'JENIS BIAYA MARKETING LOOKUP',
       required: true,
@@ -295,6 +317,10 @@ const FormMarketing = ({
 
   const lookupPropsManageraMarketing = [
     {
+      // side 'bottom' WAJIB untuk LookUp di dalam grid: tanpa prop ini
+      // avoidCollisions aktif dan popover membalik ke ATAS saat ruang di bawah
+      // kurang, sehingga daftarnya menutupi header kolom grid.
+      side: 'bottom' as const,
       columns: [{ key: 'nama', name: 'NAMA' }],
       labelLookup: 'MANAGER MARKETING LOOKUP',
       required: true,
@@ -311,6 +337,10 @@ const FormMarketing = ({
 
   const lookupPropsStatusPotongBiayaKantor = [
     {
+      // side 'bottom' WAJIB untuk LookUp di dalam grid: tanpa prop ini
+      // avoidCollisions aktif dan popover membalik ke ATAS saat ruang di bawah
+      // kurang, sehingga daftarnya menutupi header kolom grid.
+      side: 'bottom' as const,
       columns: [{ key: 'text', name: 'NAMA' }],
       labelLookup: 'STATUS POTONG BIAYA KANTOR LOOKUP',
       required: true,
@@ -327,6 +357,10 @@ const FormMarketing = ({
 
   const lookupPropsJenisProsesFee = [
     {
+      // side 'bottom' WAJIB untuk LookUp di dalam grid: tanpa prop ini
+      // avoidCollisions aktif dan popover membalik ke ATAS saat ruang di bawah
+      // kurang, sehingga daftarnya menutupi header kolom grid.
+      side: 'bottom' as const,
       columns: [{ key: 'nama', name: 'NAMA' }],
       labelLookup: 'JENIS PROSES FEE LOOKUP',
       required: true,
@@ -2016,10 +2050,7 @@ const FormMarketing = ({
 
                   <div className="flex w-full flex-col justify-between lg:flex-row lg:items-center">
                     <div className="w-full lg:w-[15%]">
-                      <FormLabel
-                        required={true}
-                        className="text-sm font-semibold"
-                      >
+                      <FormLabel className="text-sm font-semibold">
                         Karyawan
                       </FormLabel>
                     </div>
@@ -2153,10 +2184,7 @@ const FormMarketing = ({
 
                   <div className="flex w-full flex-col justify-between lg:flex-row lg:items-center">
                     <div className="w-full lg:w-[15%]">
-                      <FormLabel
-                        required={true}
-                        className="text-sm font-semibold"
-                      >
+                      <FormLabel className="text-sm font-semibold">
                         Marketing Group
                       </FormLabel>
                     </div>

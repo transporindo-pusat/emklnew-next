@@ -125,10 +125,10 @@ const FormPanjarHeader = ({
 
   const addRow = () => {
     const newRow: Partial<PanjarMuatanDetail> & { isNew: boolean } = {
-      id: 0,
+      id: '',
       nobukti: '',
-      panjar_id: 0,
-      orderanmuatan_id: 0,
+      panjar_id: '',
+      orderanmuatan_id: '',
       orderanmuatan_nobukti: '',
       estimasi: '0',
       nominal: '0',
@@ -208,7 +208,7 @@ const FormPanjarHeader = ({
 
           // Otherwise, render the delete button for rows with data
           const rowIndex = rows.findIndex(
-            (row) => Number(row.id) === Number(props.row.id)
+            (row) => String(row.id) === String(props.row.id)
           );
           return (
             <div className="m-0 flex h-full w-full cursor-pointer items-center justify-center p-0 text-xs">
@@ -576,10 +576,10 @@ const FormPanjarHeader = ({
       if (allDataDetail?.data?.length > 0 && mode !== 'add') {
         // Format data detail utama (tanpa rincian)
         const formattedRows = allDataDetail.data.map((item: any) => ({
-          id: Number(item.id),
+          id: item.id,
           nobukti: item.nobukti ?? '',
-          panjar_id: Number(item.panjar_id),
-          orderanmuatan_id: item.orderanmuatan_id ?? 0,
+          panjar_id: item.panjar_id,
+          orderanmuatan_id: item.orderanmuatan_id ?? '',
           orderanmuatan_nobukti: item.orderanmuatan_nobukti ?? '',
           estimasi: formatCurrency(item.estimasi) ?? '0',
           nominal: formatCurrency(item.nominal) ?? '0',
@@ -595,10 +595,10 @@ const FormPanjarHeader = ({
         setRows([
           // If no data, add one editable row and the "Add Row" button row at the end
           {
-            id: 0,
+            id: '',
             nobukti: '',
-            panjar_id: 0,
-            orderanmuatan_id: 0,
+            panjar_id: '',
+            orderanmuatan_id: '',
             orderanmuatan_nobukti: '',
             estimasi: '0',
             nominal: '0',
@@ -731,7 +731,7 @@ const FormPanjarHeader = ({
                               key={index}
                               {...props}
                               lookupValue={(value: any) => {
-                                forms.setValue('jenisorder_id', Number(value));
+                                forms.setValue('jenisorder_id', value);
                               }}
                               onSelectRow={(val) => {
                                 forms.setValue('jenisorder_nama', val?.nama);
@@ -764,7 +764,7 @@ const FormPanjarHeader = ({
                               {...props}
                               disabled={mode == 'delete' || mode == 'view'}
                               lookupValue={(value: any) => {
-                                forms.setValue('biayaemkl_id', Number(value));
+                                forms.setValue('biayaemkl_id', value);
                               }}
                               onSelectRow={(val) => {
                                 forms.setValue('biayaemkl_nama', val?.nama);

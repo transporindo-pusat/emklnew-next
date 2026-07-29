@@ -297,7 +297,6 @@ const Profile = () => {
                         <InputMask
                           mask="9999-9999-999999"
                           maskPlaceholder={null}
-                          maskChar={null}
                           value={nohp} // Bind the input value to the noHp state
                           onChange={
                             (e: React.ChangeEvent<HTMLInputElement>) =>

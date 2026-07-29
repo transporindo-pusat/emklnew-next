@@ -155,7 +155,10 @@ const GridMarketing = () => {
     useDeleteMarketing();
 
   const forms = useForm<MarketingInput>({
-    resolver: zodResolver(marketingSchema),
+    // Saat DELETE tak perlu resolver: yang dikirim hanya id baris, sedangkan
+    // aturan "wajib diisi" justru memunculkan pesan merah di seluruh field dan
+    // menahan tombol DELETE. Pola sama dengan GridAkunPusat/GridManagerMarketing.
+    resolver: mode === 'delete' ? undefined : zodResolver(marketingSchema),
     mode: 'onSubmit',
     defaultValues: {
       nama: '',
@@ -2479,7 +2482,9 @@ const GridMarketing = () => {
       forms.setValue('statusbagifee_nama', row?.statusbagifee_nama);
       forms.setValue('statusfeemanager', row?.statusfeemanager);
       forms.setValue('statusfeemanager_nama', row?.statusfeemanager_nama);
-      forms.setValue('marketinggroup_id', Number(row?.marketinggroup_id));
+      // kolomnya TEXT & DTO backend z.string() — Number() mengirim number dan
+      // ditolak 400 saat edit; kosong dibiarkan '' karena field ini opsional
+      forms.setValue('marketinggroup_id', String(row?.marketinggroup_id ?? ''));
       forms.setValue('marketinggroup_nama', row?.marketinggroup_nama);
       forms.setValue('statusprafee', row?.statusprafee);
       forms.setValue('statusprafee_nama', row?.statusprafee_nama);

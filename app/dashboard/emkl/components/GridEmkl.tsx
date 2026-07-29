@@ -2739,7 +2739,7 @@ const GridEmkl = () => {
       rows.length > 0 &&
       mode !== 'add' // Only fill the form if not in addMode
     ) {
-      forms.setValue('id', Number(rowData?.id));
+      forms.setValue('id', rowData?.id);
       forms.setValue('nama', rowData?.nama);
       forms.setValue('contactperson', rowData?.contactperson);
       forms.setValue('alamat', rowData?.alamat);

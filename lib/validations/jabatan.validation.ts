@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { dynamicRequiredMessage } from '../utils';
 
 export const jabatanSchema = z.object({
-  id: z.number().nullable().optional(),
+  id: z.string().nullable().optional(),
   nama: z.string().nonempty({ message: dynamicRequiredMessage('NAMA') }),
 
   keterangan: z
@@ -15,7 +15,7 @@ export const jabatanSchema = z.object({
 
   statusaktif_nama: z.string().nullable().optional(),
 
-  divisi_id: z.number().min(1, { message: dynamicRequiredMessage('Divisi') }),
+  divisi_id: z.string().min(1, { message: dynamicRequiredMessage('Divisi') }),
 
   divisi: z.string().nullable().optional()
 });

@@ -1502,7 +1502,7 @@ const GridJabatan = () => {
       keterangan: '',
       statusaktif: aktif.id,
       statusaktif_nama: aktif.text,
-      divisi_id: 0
+      divisi_id: ''
     });
   };
 
@@ -1652,12 +1652,14 @@ const GridJabatan = () => {
       rows.length > 0 &&
       mode !== 'add' // Only fill the form if not in addMode
     ) {
-      forms.setValue('id', Number(rowData?.id));
+      forms.setValue('id', rowData?.id);
       forms.setValue('nama', rowData?.nama);
       forms.setValue('keterangan', rowData?.keterangan);
       forms.setValue('statusaktif', rowData?.statusaktif ?? '');
       forms.setValue('statusaktif_nama', rowData?.text || '');
-      forms.setValue('divisi_id', Number(rowData?.divisi_id) || 1);
+      // divisi_id kolomnya text di DB & z.string() di skema — Number() bikin
+      // validasi gagal diam-diam sehingga submit (termasuk delete) tak jalan
+      forms.setValue('divisi_id', String(rowData?.divisi_id ?? ''));
       forms.setValue('divisi', rowData?.divisi || '');
     }
     // JANGAN set/reset form saat mode 'add' di sini — resetAddForm() di handleAdd menanganinya

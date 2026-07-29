@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { dynamicRequiredMessage } from '../utils';
 
 export const biayaMuatanDetailSchema = z.object({
-  id: z.number().optional(),
+  id: z.string().optional(),
   biaya_id: z.number().nullable().optional(),
   nobukti: z.string().nullable().optional(),
 
@@ -44,7 +44,7 @@ export const biayaMuatanDetailSchema = z.object({
 export type biayaDetailBiayaInput = z.infer<typeof biayaMuatanDetailSchema>;
 
 export const biayaHeaderSchema = z.object({
-  id: z.number().optional(),
+  id: z.string().optional(),
   nobukti: z.string().nullable().optional(),
 
   tglbukti: z

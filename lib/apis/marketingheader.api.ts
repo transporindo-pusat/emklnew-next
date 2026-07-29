@@ -111,8 +111,18 @@ export const deleteMarketingFn = async (id: string) => {
   try {
     const response = await api2.delete(`marketing/${id}`);
     return response;
-  } catch (error) {
-    console.error('Error deleting marketing in api fe:', error);
+  } catch (error: any) {
+    // 4xx = penolakan yang MEMANG diharapkan (mis. 400 "marketing masih dipakai
+    // di tabel shipper"). Error-nya tetap dilempar dan sudah ditampilkan sebagai
+    // dialog oleh useDeleteMarketing.onError, jadi cukup console.warn — dengan
+    // console.error, Next.js dev memunculkan overlay merah "Console Error"
+    // untuk sesuatu yang sebenarnya sudah tertangani.
+    const status = error?.response?.status;
+    if (status >= 400 && status < 500) {
+      console.warn('Delete marketing ditolak backend:', status, error?.response?.data?.message);
+    } else {
+      console.error('Error deleting marketing in api fe:', error);
+    }
     throw error;
   }
 };

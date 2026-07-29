@@ -89,7 +89,6 @@ const InputCurrency: React.FC<CurrencyInputProps> = ({
       <InputMask
         mask=""
         maskPlaceholder={null}
-        maskChar={null}
         value={inputValue}
         readOnly={readOnly}
         beforeMaskedStateChange={beforeMaskedStateChange}

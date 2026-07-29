@@ -94,7 +94,7 @@ const FilterGrid = () => {
                   key={index}
                   {...props}
                   onSelectRow={(val) => {
-                    dispatch(setSelectedJenisOrderan(Number(val.id)));
+                    dispatch(setSelectedJenisOrderan(val.id));
                     dispatch(setSelectedJenisOrderanNama(val.nama));
                   }}
                   onClear={() => {
