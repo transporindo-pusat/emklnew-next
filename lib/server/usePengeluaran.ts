@@ -53,7 +53,14 @@ export const useGetPengeluaranHeader = (
     ['pengeluaran', filters],
     async () => await getPengeluaranHeaderFn(filters, signal),
     {
-      enabled: !signal?.aborted,
+      // Guard page >= 1 disamakan dengan useGetAlatbayar. GridPengeluaranHeader
+      // memakai trik setCurrentPage(0) di handleScroll untuk memaksa effect
+      // jalan ulang saat halaman tujuan kebetulan == currentPage yang basi.
+      // Tanpa guard ini, fase antara itu benar-benar mengirim request page=0;
+      // FindAllSchema meng-clamp-nya ke 1, jadi yang balik adalah data halaman 1
+      // yang lalu tersimpan ke pageDataCache dengan key 0 — satu request sia-sia
+      // plus entri cache yang tidak pernah dirender.
+      enabled: !signal?.aborted && (filters.page ?? 1) >= 1,
       staleTime: 0,
       cacheTime: 0
     }
@@ -81,13 +88,31 @@ export const useGetPengeluaranDetail = (
       created_at?: string;
       updated_at?: string;
     };
-  } = {}
+  } = {},
+  signal?: AbortSignal
 ) => {
+  // Key 'pengeluarandetail', BUKAN 'pengeluaran'. Dulu detail memakai key yang
+  // sama persis dengan useGetPengeluaranHeader, sehingga
+  // invalidateQueries('pengeluaran') (useDeletePengeluaran, useKasGantung)
+  // ikut membatalkan cache detail — dan sebaliknya, cache detail ikut
+  // di-refetch tiap kali header berubah walau isinya tidak terkait.
   return useQuery(
-    ['pengeluaran', filters],
-    async () => await getPengeluaranDetailFn(filters),
+    ['pengeluarandetail', filters],
+    async () => await getPengeluaranDetailFn(filters, signal),
     {
-      enabled: !!filters.filters?.nobukti
+      // Jangan fetch saat page < 1 (trik setCurrentPage(0) di grid untuk memaksa
+      // refetch). Backend meng-clamp page<1 ke 1, jadi tanpa guard ini halaman 0
+      // akan memulangkan halaman 1 dan mengotori window cache. Sama seperti
+      // useGetAlatbayar.
+      enabled:
+        !!filters.filters?.nobukti &&
+        !signal?.aborted &&
+        (filters.page ?? 1) >= 1,
+      // staleTime/cacheTime 0: window pagination dikelola sendiri oleh grid
+      // (pageDataCache + streamBuffer). Cache react-query di atasnya hanya
+      // membuat data lama sempat terpakai saat filter/sort berubah.
+      staleTime: 0,
+      cacheTime: 0
     }
   );
 };

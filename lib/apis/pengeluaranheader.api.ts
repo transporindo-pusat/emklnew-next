@@ -50,17 +50,22 @@ export const getPengeluaranHeaderByIdFn = async (
 };
 
 export const getPengeluaranDetailFn = async (
-  filters: GetParams = {}
+  filters: GetParams = {},
+  signal?: AbortSignal
 ): Promise<IAllPengeluaranDetail> => {
   try {
     const queryParams = buildQueryParams(filters);
 
     const response = await api2.get('/pengeluarandetail', {
-      params: queryParams
+      params: queryParams,
+      signal
     });
 
     return response.data;
   } catch (error) {
+    if (signal?.aborted) {
+      throw new Error('Request was cancelled');
+    }
     console.error('Error:', error);
     throw new Error('Failed');
   }

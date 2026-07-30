@@ -343,6 +343,13 @@ const GridPengeluaranHeader = () => {
   useEffect(() => {
     selectedRowRef.current = selectedRow;
   }, [selectedRow]);
+  // MASTER-DETAIL: id header yang sedang dipilih. Wajib ada di grid yang punya
+  // anak (detail), TIDAK diperlukan di grid mandiri seperti alatbayar.
+  // Alasannya: `selectedRow` itu index ke dalam `rows`, sedangkan `rows` cuma
+  // memuat WINDOW_SIZE halaman yang sedang di-cache. Begitu window bergeser
+  // saat scroll, index lama bisa menunjuk ke luar array -> rows[selectedRow]
+  // undefined. Id ini dipakai untuk menemukan kembali baris yang sama.
+  const selectedHeaderIdRef = useRef<string | null>(null);
 
   const {
     data: allData,
@@ -1865,9 +1872,20 @@ const GridPengeluaranHeader = () => {
 
   function handleCellClick(args: { row: PengeluaranHeader }) {
     const clickedRow = args.row;
+    // args.row bisa undefined saat grid sedang re-render di tengah pergeseran
+    // window (selectCell programatik menembak index yang barisnya sudah hilang).
+    if (!clickedRow) return;
     const rowIndex = rows.findIndex((r) => r.id === clickedRow.id);
     if (rowIndex !== -1) {
       setSelectedRow(rowIndex);
+      // MASTER-DETAIL: ini SATU-SATUNYA tempat id header yang dipilih dicatat.
+      // onSelectedCellChange memanggil handler ini untuk semua pemilihan yang
+      // benar-benar disengaja (klik, panah keyboard, selectCell setelah
+      // sort/filter). Pergeseran window saat scroll TIDAK lewat sini — dia cuma
+      // menggeser `selectedRow` — sehingga id pilihan user tidak ikut bergeser.
+      if (!isTransitioning && !isFetching) {
+        selectedHeaderIdRef.current = String(clickedRow.id);
+      }
     }
   }
   const orderedColumns = useMemo(() => {
@@ -3111,13 +3129,71 @@ const GridPengeluaranHeader = () => {
   }, [rows]);
 
   useEffect(() => {
-    if (rows.length > 0 && selectedRow !== null) {
-      const selectedRowData = rows[selectedRow];
-      dispatch(setHeaderData(selectedRowData)); // Pastikan data sudah benar
-    } else {
+    // Selama lazy loading masih bergerak, `rows` boleh kosong sesaat dan
+    // `selectedRow` boleh menunjuk ke index yang barisnya belum/sudah tidak ada.
+    // Semua itu keadaan SEMENTARA, bukan "user membatalkan pilihan".
+    const sedangMuat =
+      isLoadingData || isFetching || isTransitioning || shouldBulkFetch;
+
+    if (rows.length === 0) {
+      // Kosong sementara (Ctrl+End, ganti window, refetch) -> pertahankan
+      // pilihan lama. Dulu di sini id-nya ikut dibuang, jadi begitu data balik
+      // tidak ada lagi acuan untuk memulihkan pilihan dan detail ikut kosong.
+      if (sedangMuat) return;
+
+      // Benar-benar tidak ada data (filter tidak ketemu / periode kosong).
+      selectedHeaderIdRef.current = null;
       dispatch(setHeaderData({}));
+      return;
     }
-  }, [rows, selectedRow, dispatch]);
+
+    // ID yang menang, BUKAN index. `selectedRow` digeser sebanyak filters.limit
+    // tiap kali window bergeser, jadi nilainya tidak bisa dipercaya sebagai
+    // penunjuk "baris yang dipilih user". Id dicatat hanya di handleCellClick
+    // (pemilihan yang disengaja), sehingga dia tetap menunjuk bukti yang sama
+    // sepanjang user scroll.
+    const idById = selectedHeaderIdRef.current;
+    const idxById = idById
+      ? rows.findIndex((r) => String(r.id) === String(idById))
+      : -1;
+
+    if (idxById >= 0) {
+      if (idxById !== selectedRow) {
+        // Barisnya masih di window tapi pindah index -> samakan lagi supaya
+        // highlight (getRowClass) muncul di baris yang benar.
+        selectedRowRef.current = idxById;
+        setSelectedRow(idxById);
+      }
+      dispatch(setHeaderData(rows[idxById]));
+      return;
+    }
+
+    if (!idById) {
+      // Belum pernah ada pilihan (load pertama) -> pakai index apa adanya.
+      const selectedRowData = rows[selectedRow] ?? rows[0];
+      if (selectedRowData) {
+        selectedHeaderIdRef.current = String(selectedRowData.id);
+        dispatch(setHeaderData(selectedRowData));
+      }
+      return;
+    }
+
+    // Ada pilihan, tapi halamannya sudah keluar dari window (user scroll jauh).
+    // Sengaja TIDAK dispatch apa pun: headerData dibiarkan menunjuk bukti yang
+    // dipilih user, jadi grid detail tetap terisi. Kalau di sini di-dispatch
+    // undefined/{}, detail akan mengosongkan diri DAN mematikan query-nya
+    // (enabled: !!nobukti) sehingga tampak kosong padahal headernya ada isinya.
+    // Ref-nya juga dipertahankan supaya pilihan otomatis pulih saat user
+    // scroll balik ke halaman itu.
+  }, [
+    rows,
+    selectedRow,
+    dispatch,
+    isLoadingData,
+    isFetching,
+    isTransitioning,
+    shouldBulkFetch
+  ]);
   useEffect(() => {
     if (gridRef.current && dataGridKey) {
       setTimeout(() => {
