@@ -23,7 +23,7 @@ export type PageFilter = {
   pengeluaranEmklNama: string;
   penerimaanEmkl: string | null;
   penerimaanEmklNama: string;
-  jenisOrderan: number | null;
+  jenisOrderan: string;
   jenisOrderanNama: string;
   jenisStatusJob: number | null;
   jenisStatusJobNama: string;
@@ -53,7 +53,7 @@ type FilterSliceState = {
   selectedPengeluaranEmklNama: string;
   selectedPenerimaanEmkl: string | null;
   selectedPenerimaanEmklNama: string;
-  selectedJenisOrderan: number | null;
+  selectedJenisOrderan: string;
   selectedJenisOrderanNama: string;
   selectedJenisStatusJob: number | null;
   selectedJenisStatusJobNama: string;
@@ -93,7 +93,7 @@ const emptyFilter: PageFilter = {
   pengeluaranEmklNama: '',
   penerimaanEmkl: null,
   penerimaanEmklNama: '',
-  jenisOrderan: null,
+  jenisOrderan: '',
   jenisOrderanNama: '',
   jenisStatusJob: null,
   jenisStatusJobNama: '',
@@ -120,7 +120,7 @@ const initialState: FilterSliceState = {
   selectedPengeluaranEmklNama: '',
   selectedPenerimaanEmkl: null,
   selectedPenerimaanEmklNama: '',
-  selectedJenisOrderan: null,
+  selectedJenisOrderan: '',
   selectedJenisOrderanNama: '',
   selectedJenisStatusJob: null,
   selectedJenisStatusJobNama: '',
@@ -225,7 +225,7 @@ const filterSlice = createSlice({
       state.selectedPenerimaanEmklNama = action.payload;
       state.pending.penerimaanEmklNama = action.payload;
     },
-    setSelectedJenisOrderan(state, action: PayloadAction<number | null>) {
+    setSelectedJenisOrderan(state, action: PayloadAction<string>) {
       state.selectedJenisOrderan = action.payload;
       state.pending.jenisOrderan = action.payload;
     },
@@ -266,7 +266,7 @@ const filterSlice = createSlice({
       state.selectedPengeluaranEmklNama = '';
       state.selectedPenerimaanEmkl = null;
       state.selectedPenerimaanEmklNama = '';
-      state.selectedJenisOrderan = null;
+      state.selectedJenisOrderan = '';
       state.selectedJenisOrderanNama = '';
       state.selectedJenisStatusJob = null;
       state.selectedJenisStatusJobNama = '';
