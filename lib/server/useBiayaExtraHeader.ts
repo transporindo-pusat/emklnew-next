@@ -43,26 +43,11 @@ export const useGetAllBiayaExtraHeader = (
 
   return useQuery(
     ['biayaextraheader', filters],
-    async () => {
-      // Only trigger processing if the page is 1
-      if (filters.page === 1) {
-        dispatch(setProcessing());
-      }
-
-      try {
-        const data = await getAllBiayaExtraHeaderFn(filters, signal);
-        return data;
-      } catch (error) {
-        // Show error toast and dispatch processed
-        dispatch(setProcessed());
-        throw error;
-      } finally {
-        // Regardless of success or failure, we dispatch setProcessed after the query finishes
-        dispatch(setProcessed());
-      }
-    },
+    async () => await getAllBiayaExtraHeaderFn(filters, signal),
     {
-      enabled: !signal?.aborted
+      enabled: !signal?.aborted && (filters.page ?? 1) >= 1,
+      staleTime: 0,
+      cacheTime: 0
     }
   );
 };
@@ -89,10 +74,16 @@ export const useGetBiayaExtraMuatanDetail = (
   signal?: AbortSignal
 ) => {
   return useQuery(
-    ['biayaextraheader', id, filters],
+    ['biayaextramuatandetail', id, filters],
     async () => await getBiayaExtraMuatanDetailFn(id!, filters),
     {
-      enabled: !!id || !signal?.aborted // Hanya aktifkan query jika tab aktif adalah "pengalamankerja"
+      // Jangan fetch saat page < 1 (trik setCurrentPage(0) di grid untuk memaksa
+      // refetch window pagination) atau saat belum ada header terpilih.
+      enabled: !!id && (filters.page ?? 1) >= 1,
+      // staleTime/cacheTime 0: window pagination dikelola sendiri oleh grid
+      // (pageDataCache + streamBuffer), sama seperti useGetPengeluaranDetail.
+      staleTime: 0,
+      cacheTime: 0
     }
   );
 };
@@ -119,10 +110,12 @@ export const useGetBiayaExtraBongkaranDetail = (
   signal?: AbortSignal
 ) => {
   return useQuery(
-    ['biayaextraheader', id, filters],
+    ['biayaextrabongkarandetail', id, filters],
     async () => await getBiayaExtraBongkaranDetailFn(id!, filters),
     {
-      enabled: !!id || !signal?.aborted // Hanya aktifkan query jika tab aktif adalah "pengalamankerja"
+      enabled: !!id && (filters.page ?? 1) >= 1,
+      staleTime: 0,
+      cacheTime: 0
     }
   );
 };

@@ -40,8 +40,8 @@ export const userRoleSchema = z.object({
 export type UserRoleInput = z.infer<typeof userRoleSchema>;
 
 export const userAclSchema = z.object({
-  userId: z.number().min(1, 'User ID must be a positive number'),
-  data: z.array(z.number().nullable().optional())
+  userId: z.string().nonempty('User ID wajib diisi'),
+  data: z.array(z.string().nullable().optional())
 });
 
 export type UserAclInput = z.infer<typeof userAclSchema>;

@@ -134,7 +134,7 @@ const FormUserAcl = ({
     }, 200);
     setSelectedRow(0);
   };
-  const handleRowSelect = (rowId: number) => {
+  const handleRowSelect = (rowId: string) => {
     setCheckedRows((prev) => {
       const updated = new Set(prev);
       if (updated.has(rowId)) {
@@ -142,19 +142,26 @@ const FormUserAcl = ({
       } else {
         updated.add(rowId);
       }
-      const data = Array.from(updated).map(Number); // Ensure each ID is a number
+      const data = Array.from(updated);
       forms.setValue('data', data);
       setIsAllSelected(updated.size === rows.length);
       return updated;
     });
   };
   const handleSelectAll = () => {
-    if (isAllSelected) {
-      setCheckedRows(new Set());
-    } else {
-      const allIds = rows.map((row) => row.id);
-      setCheckedRows(new Set(allIds));
-    }
+    setCheckedRows((prev) => {
+      const updated = new Set(prev);
+      if (isAllSelected) {
+        // Hanya lepas centang baris yang sedang dimuat (rows) — baris di
+        // halaman lain yang sudah dicentang sebelumnya tetap dipertahankan.
+        rows.forEach((row) => updated.delete(row.id));
+      } else {
+        rows.forEach((row) => updated.add(row.id));
+      }
+      const data = Array.from(updated);
+      forms.setValue('data', data);
+      return updated;
+    });
     setIsAllSelected(!isAllSelected);
   };
   function highlightText(
@@ -260,8 +267,8 @@ const FormUserAcl = ({
         renderCell: ({ row }: { row: Row }) => (
           <div className="flex items-center justify-center">
             <Checkbox
-              checked={checkedRows.has(Number(row.id))}
-              onCheckedChange={() => handleRowSelect(Number(row.id))}
+              checked={checkedRows.has(row.id)}
+              onCheckedChange={() => handleRowSelect(row.id)}
               id={`row-checkbox-${row.id}`}
             />
           </div>
@@ -576,17 +583,31 @@ const FormUserAcl = ({
       }, 100); // Penundaan singkat untuk memastikan grid ter-render
     }
   }, [rows, isFirstLoad]);
+  // Seed checkedRows dari ACL yang sudah tersimpan HANYA SEKALI per user/dialog
+  // dibuka. Sebelumnya efek ini bergantung pada `useracl` (objek data dari
+  // react-query) dan `forms` — bila salah satu referensinya berubah akibat
+  // re-render apa pun (scroll, filter, toggle checkbox lain), efek ini
+  // menjalankan ulang `setCheckedRows(new Set(userAclIds))`, MENIMPA centang
+  // yang baru saja diubah user dan mengembalikannya ke state awal dari server.
+  // Guard dengan ref supaya seeding hanya terjadi sekali per user yang dibuka.
+  const seededUserIdRef = useRef<string | number | null>(null);
   useEffect(() => {
-    if (useracl && useracl.data) {
-      // Ekstrak ID dari data useracl dan konversi ke number
-      const userAclIds: number[] = useracl.data.map((item: any) =>
-        Number(item.id)
-      );
-
-      setCheckedRows(new Set(userAclIds));
-      forms.setValue('data', userAclIds);
+    if (!popOver) {
+      seededUserIdRef.current = null;
+      return;
     }
-  }, [useracl, forms]);
+    if (!userAclDetail?.id) return;
+    if (seededUserIdRef.current === userAclDetail.id) return;
+    if (!useracl || !useracl.data) return;
+
+    const userAclIds: string[] = useracl.data.map((item: any) =>
+      String(item.id)
+    );
+
+    setCheckedRows(new Set(userAclIds));
+    forms.setValue('data', userAclIds);
+    seededUserIdRef.current = userAclDetail.id;
+  }, [popOver, userAclDetail?.id, useracl, forms]);
 
   useEffect(() => {
     if (!popOver) return;

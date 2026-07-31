@@ -96,6 +96,12 @@ interface LookUpProps {
   onSelectRow?: (selectedRowValue?: any | undefined) => void;
   onClear?: () => void;
   autoSearch?: boolean;
+  /**
+   * Menampilkan saran inline (ghost text abu-abu) berdasarkan hasil match
+   * teratas saat mengetik. Tekan Tab atau panah kanan (kursor di akhir)
+   * untuk menerima saran. Default: true.
+   */
+  autoComplete?: boolean;
   isExactMatch?: boolean;
   showClearButton?: boolean;
   forInput?: boolean;
@@ -144,6 +150,7 @@ export default function LookUp({
   onSelectRow,
   onClear,
   autoSearch = true,
+  autoComplete = true,
   isExactMatch = false,
   showClearButton = true,
   forInput = false,
@@ -196,6 +203,9 @@ export default function LookUp({
   const columnInputRefs = useRef<{ [key: string]: HTMLInputElement | null }>(
     {}
   );
+  // Beberapa lookup memakai data redux yang sama tapi dengan `label` berbeda
+  // (mis. STATUS LANGSUNG CAIR & STATUS DEFAULT sama-sama grup STATUS NILAI),
+  // jadi kunci store bisa di-override lewat `reduxKey`.
   const storeKey = reduxKey || label || '';
   const type = useSelector((state: RootState) => state.lookup.type[storeKey]);
   const data = useSelector((state: RootState) => state.lookup.data[storeKey]);
@@ -234,6 +244,12 @@ export default function LookUp({
   const isTypingRef = useRef(false);
   const shouldFetchWithoutFilterRef = useRef(false);
   const pasteErrorRef = useRef(false);
+  // Teks asli yang diketik user (tetap meski inputValue tertimpa saat navigasi).
+  const typedTextRef = useRef<string>('');
+  // Penanda agar fetch tidak terpicu saat inputValue berubah karena navigasi.
+  const skipNextFetchRef = useRef<boolean>(false);
+  // lookupNama terakhir yang sudah di-resolve ke row-nya (hindari fetch ulang).
+  const resolvedNamaRef = useRef<string | null>(null);
 
   // fetchKey di-increment setiap kali ada filter/search baru yang butuh fetch segar.
   // Ini menggantikan rows.length di dependency array agar tidak terjadi fetch loop.
@@ -347,6 +363,7 @@ export default function LookUp({
 
       setOnPaste(false);
       setInputValue('');
+      typedTextRef.current = '';
       setRows([]);
       setFiltering(false);
       setCurrentPage(1);
@@ -406,6 +423,7 @@ export default function LookUp({
     }
 
     setInputValue(searchValue);
+    typedTextRef.current = searchValue;
 
     setShowError({ label: label ?? '', status: false, message: '' });
     dispatch(removeErrorLookup(label || ''));
@@ -601,6 +619,7 @@ export default function LookUp({
     if (disabled && !clearDisabled) return;
     setFilters({ ...filters, search: '', filters: {} });
     setInputValue('');
+    typedTextRef.current = '';
     if (lookupValue) {
       lookupValue(null);
     }
@@ -939,7 +958,7 @@ export default function LookUp({
         return;
       }
 
-      const classValue = rowData[postData as string];
+      const classValue = String(rowData[postData as string] ?? '');
       const value = dataToPost ? rowData[dataToPost as string] : rowData.id;
 
       setInputValue(classValue);
@@ -1032,13 +1051,16 @@ export default function LookUp({
         }
       }
       if (newRows.length > 0) {
-        const targetRow = exactMatch
-          ? newRows.find(
-              (row) =>
-                String(row[postData as string]).toUpperCase() ===
-                valueToSearch.toUpperCase()
-            )
-          : newRows[0];
+        const exactRow = newRows.find(
+          (row) =>
+            String(row[postData as string] ?? '').toUpperCase() ===
+            (valueToSearch ?? '').toUpperCase()
+        );
+        // Di luar mode exactMatch, baris pertama tetap dipakai sebagai
+        // fallback — tapi kalau ada baris yang PERSIS sama dengan isi input,
+        // baris itu yang menang supaya nilai yang sedang tampil tidak
+        // tertukar dengan hasil match sebagian.
+        const targetRow = exactMatch ? exactRow : exactRow ?? newRows[0];
 
         if (!targetRow) {
           dispatch(removePendingLookup(label || ''));
@@ -1057,7 +1079,7 @@ export default function LookUp({
             );
           }
         } else {
-          const classValue = targetRow[postData as string];
+          const classValue = String(targetRow[postData as string] ?? '');
           setInputValue(classValue);
           setClicked(true);
           dispatch(setSelectLookup({ key: label ?? '', data: targetRow }));
@@ -1135,6 +1157,94 @@ export default function LookUp({
     }
   };
 
+  // Resolve teks awal dari parent (`lookupNama`) menjadi row aslinya supaya
+  // lookupValue/onSelectRow tetap terpanggil walau dropdown belum pernah
+  // dibuka. Sengaja TIDAK memakai selectFirstRow: fungsi itu ikut menimpa
+  // inputValue, memunculkan pesan "DATA TIDAK DITEMUKAN", dan memindahkan
+  // fokus ke input — tiga hal yang tidak boleh terjadi untuk resolve latar
+  // belakang atas nilai yang memang sudah dipercaya dari parent. Kalau resolve
+  // gagal, input tetap menampilkan teks dari parent apa adanya.
+  const resolveLookupNama = async (namaToResolve: string) => {
+    if (!namaToResolve || !endpoint || type === 'local') return;
+    if (resolvedNamaRef.current === namaToResolve) return;
+    resolvedNamaRef.current = namaToResolve;
+
+    try {
+      const controller = new AbortController();
+      const fetched = await fetchRows(controller.signal, namaToResolve, false);
+
+      if (fetched.length === 0) {
+        // Kemungkinan besar request gagal/dibatalkan — buka lagi kuncinya
+        // supaya masih bisa dicoba ulang saat prop berubah lagi.
+        resolvedNamaRef.current = null;
+        return;
+      }
+
+      const match = fetched.find(
+        (row) =>
+          String(row[postData as string] ?? '').toUpperCase() ===
+          namaToResolve.toUpperCase()
+      );
+
+      if (!match) return;
+
+      dispatch(setSelectLookup({ key: label ?? '', data: match }));
+      lookupValue?.(dataToPost ? match[dataToPost as string] : match.id);
+      onSelectRow?.(match);
+    } catch {
+      // Diabaikan: input tetap memakai teks dari parent.
+    }
+  };
+
+  // ─── INLINE AUTOCOMPLETE (ghost text) ───────────────────────────────────────
+  // Saran mengikuti baris yang sedang ter-select (selectedRow), bukan selalu
+  // baris teratas. Ghost text hanya muncul bila teks yang diketik merupakan
+  // awalan dari nilai tampilan baris tersebut (case-insensitive).
+  const suggestion = useMemo(() => {
+    if (!autoComplete || forInput) return '';
+    if (!open) return '';
+    const typed = inputValue ?? '';
+    if (typed.trim() === '') return '';
+    if (rows.length === 0) return '';
+
+    const idx = Math.min(Math.max(0, selectedRow), rows.length - 1);
+    const candidateRaw = rows[idx]?.[postData as string];
+    if (candidateRaw == null) return '';
+
+    const candidate = String(candidateRaw);
+    if (
+      candidate.length > typed.length &&
+      candidate.toLowerCase().startsWith(typed.toLowerCase())
+    ) {
+      return candidate;
+    }
+    return '';
+  }, [autoComplete, forInput, open, inputValue, rows, selectedRow, postData]);
+
+  // Bagian abu-abu yang ditampilkan (sisa setelah teks yang sudah diketik).
+  const suggestionCompletion = suggestion
+    ? suggestion.slice(inputValue.length)
+    : '';
+
+  const acceptSuggestion = useCallback(() => {
+    if (!suggestion) return;
+    setInputValue(suggestion);
+    setHasUserInteracted(true);
+    isUserTypingRef.current = true;
+    isTypingRef.current = false;
+    setRows([]);
+    setFilters((prev) => ({
+      ...prev,
+      filters: initializeColumnFilters(),
+      search: suggestion,
+      page: 1
+    }));
+    setFiltering(true);
+    setCurrentPage(1);
+    setFetchedPages(new Set([1]));
+    setFetchKey((k) => k + 1);
+  }, [suggestion, initializeColumnFilters]);
+
   const handleInputKeydown = async (event: any) => {
     if (forInput) {
       if (event.key === 'Enter') {
@@ -1147,6 +1257,20 @@ export default function LookUp({
         setOpen(false);
       }
       return;
+    }
+
+    // Terima saran inline dengan Tab atau panah kanan (saat kursor di akhir teks)
+    if (suggestion) {
+      const el = event.currentTarget as HTMLInputElement;
+      const caretAtEnd =
+        el.selectionStart === el.value.length &&
+        el.selectionEnd === el.value.length;
+
+      if (event.key === 'Tab' || (event.key === 'ArrowRight' && caretAtEnd)) {
+        event.preventDefault();
+        acceptSuggestion();
+        return;
+      }
     }
 
     if (!autoSearch && !open && event.key === 'Enter') {
@@ -1201,6 +1325,25 @@ export default function LookUp({
       const clamped = Math.min(Math.max(0, nextRowIdx), totalRows - 1);
       setSelectedRow(clamped);
       gridRef.current?.scrollToCell?.({ rowIdx: clamped, idx: 0 });
+
+      // Sinkronkan tampilan input dengan baris yang ter-select saat navigasi,
+      // TAPI hanya kalau user memang sedang mengetik. Kalau isi input datang
+      // dari `lookupNama`/baris yang sudah terpilih (typedTextRef kosong),
+      // input TIDAK boleh disentuh — kalau tidak, nilai yang sedang tampil
+      // ikut tertimpa/terhapus begitu user menekan panah di popover.
+      const baseTyped = typedTextRef.current ?? '';
+      if (autoComplete && !forInput && baseTyped !== '' && rows[clamped]) {
+        const val = String(rows[clamped][postData as string] ?? '');
+        const isPrefix = val.toLowerCase().startsWith(baseTyped.toLowerCase());
+        const nextDisplay = isPrefix ? baseTyped : val;
+
+        // Jangan pernah mengosongkan input hanya karena baris terpilih tidak
+        // punya nilai di kolom `postData`.
+        if (nextDisplay !== '' && nextDisplay !== inputValue) {
+          skipNextFetchRef.current = true;
+          setInputValue(nextDisplay);
+        }
+      }
     };
 
     if (event.key === 'ArrowDown') {
@@ -1259,15 +1402,40 @@ export default function LookUp({
         dispatch(clearOpenName());
         return;
       }
+      // `rows` di sini bisa berisi daftar UTUH (popover sengaja dibuka tanpa
+      // memfilter pakai nilai yang sedang tampil), jadi rows[0] belum tentu
+      // baris yang cocok dengan input. Ambil baris yang benar-benar sama
+      // dengan isi input dulu; kalau tidak ada, jangan sentuh input sama
+      // sekali — sebelumnya baris pertama dipakai membabi buta sehingga
+      // nilai yang sedang tampil ikut tertimpa/terhapus.
+      const currentValue = (inputValue ?? '').trim();
+      const matchedRow =
+        rows.find(
+          (row) =>
+            String(row[postData as string] ?? '').toUpperCase() ===
+            currentValue.toUpperCase()
+        ) ?? (currentValue === '' ? rows[0] : undefined);
+
+      if (!matchedRow) {
+        dispatch(clearOpenName());
+        setOpen(false);
+        clearAllColumnFilters();
+        return;
+      }
+
+      const matchedValue = String(matchedRow[postData as string] ?? '');
+
       setFilters({
         ...filters,
-        search: rows[0][postData as string] || ''
+        search: matchedValue
       });
 
-      setInputValue(rows[0][postData as string] || '');
-      const value = dataToPost ? rows[0][dataToPost as string] : rows[0].id;
+      setInputValue(matchedValue);
+      const value = dataToPost
+        ? matchedRow[dataToPost as string]
+        : matchedRow.id;
       lookupValue?.(value);
-      onSelectRow?.(rows[0]);
+      onSelectRow?.(matchedRow);
       dispatch(clearOpenName());
       setOpen(false);
       clearAllColumnFilters();
@@ -1280,11 +1448,15 @@ export default function LookUp({
     }
   };
 
+  // `skipFilters` = padanan lokal dari parameter dengan nama sama di
+  // buildParams (dipakai fetchRows untuk lookup ber-endpoint): search +
+  // filter kolom diabaikan, `filterby` TETAP dipakai. Ini yang membuat
+  // popover tampil utuh saat dibuka walau input sudah ada isinya.
   const applyFilters = useCallback(
-    (rows: Row[], skipSearch: boolean = false) => {
+    (rows: Row[], skipFilters: boolean = false) => {
       let filtered = rows;
 
-      if (!skipSearch && filters.search && filters.search.trim() !== '') {
+      if (!skipFilters && filters.search && filters.search.trim() !== '') {
         const validColumnKeys = columns.map((col) => col.key);
         const searchLower = filters.search.toLowerCase();
 
@@ -1306,7 +1478,7 @@ export default function LookUp({
       );
 
       for (const [colName, filterValue] of Object.entries(
-        filters.filters || {}
+        skipFilters ? {} : filters.filters || {}
       )) {
         if (!filterValue || filterValue.trim() === '') continue;
 
@@ -1336,19 +1508,40 @@ export default function LookUp({
   // fetchKey di-increment setiap kali filter/search baru siap, memastikan
   // fetch selalu terpicu meski rows sudah kosong terlebih dahulu.
   useEffect(() => {
+    // Lewati fetch bila inputValue berubah hanya karena navigasi panah
+    // (nilai baris terpilih diisikan ke input, filter/search tidak berubah).
+    if (skipNextFetchRef.current) {
+      skipNextFetchRef.current = false;
+      return;
+    }
+
+    // Dihitung SEBELUM cabang lokal supaya kedua jenis lookup (lokal maupun
+    // ber-endpoint) memakai aturan yang sama persis: begitu popover dibuka
+    // dengan input yang sudah ada isinya, daftar ditampilkan UTUH -- nilai di
+    // input TIDAK dipakai sebagai filter -- agar user bisa melihat & memilih
+    // opsi lain. Sebelumnya flag ini cuma dipakai cabang endpoint (lewat
+    // skipFilters di buildParams), sementara cabang lokal selalu menyaring
+    // `data` dengan filters.search sehingga popover terbuka hampir kosong:
+    // isinya hanya baris yang sedang terpilih.
+    const shouldFetchForDefault =
+      !hasUserInteracted && !inputValue && !lookupNama;
+    const hasActiveColumnFilters = Object.values(filters.filters || {}).some(
+      (v) => v && v.trim() !== ''
+    );
+    // Filter kolom yang aktif selalu menang: itu memang diketik user di dalam
+    // popover, bukan sisa nilai terpilih.
+    const shouldSkipFilters =
+      !hasActiveColumnFilters &&
+      (shouldFetchWithoutFilterRef.current || shouldFetchForDefault);
+
     if (type === 'local' || !endpoint) {
-      const skipSearch = open && shouldFetchWithoutFilterRef.current;
-      if (skipSearch) {
-        shouldFetchWithoutFilterRef.current = false;
-      }
-      const filteredRows = data ? applyFilters(data as Row[], skipSearch) : [];
+      const filteredRows = data ? applyFilters(data, shouldSkipFilters) : [];
 
       if (isdefault && !hasUserInteracted && !lookupNama && !inputValue) {
         if (isdefault === 'YA') {
           const defaultRow = filteredRows.find(
             (row: any) => row.default === 'YA'
           );
-          console.log('defaultRow', defaultRow, label);
           if (defaultRow) {
             setInputValue(defaultRow?.text);
             if (lookupValue) {
@@ -1370,9 +1563,6 @@ export default function LookUp({
       return;
     }
 
-    const shouldFetchForDefault =
-      !hasUserInteracted && !inputValue && !lookupNama;
-
     if (!open && !shouldFetchForDefault) {
       setIsLoading(false);
       return;
@@ -1390,20 +1580,13 @@ export default function LookUp({
     setAbortController(controller);
 
     const myRequestId = incrementRequestId();
-    const hasActiveColumnFilters = Object.values(filters.filters || {}).some(
-      (v) => v && v.trim() !== ''
-    );
-
-    const shouldSkip =
-      !hasActiveColumnFilters &&
-      (shouldFetchWithoutFilterRef.current || shouldFetchForDefault);
 
     (async () => {
       try {
         const newRows = await fetchRows(
           controller.signal,
           undefined,
-          shouldSkip
+          shouldSkipFilters
         );
 
         if (myRequestId !== getRequestId()) return;
@@ -1650,6 +1833,14 @@ export default function LookUp({
         lookupValue?.(
           dataToPost ? foundRow[dataToPost as string] : foundRow?.id
         );
+      } else if (type !== 'local' && endpoint) {
+        // Lookup remote yang belum pernah dibuka = `rows` masih kosong,
+        // jadi foundRow tidak akan pernah ketemu dari cache lokal ini —
+        // padahal caller cuma kasih teks awal (lookupNama) tanpa pernah
+        // membuka dropdown untuk resolve dulu. Resolve sekali di background
+        // supaya onSelectRow/lookupValue tetap terpanggil otomatis dengan
+        // row aslinya, bukan cuma tampil sebagai teks.
+        resolveLookupNama(lookupNama);
       }
 
       hasInitializedRef.current = true;
@@ -1680,13 +1871,24 @@ export default function LookUp({
         lookupValue?.(
           dataToPost ? foundRow[dataToPost as string] : foundRow?.id
         );
+      } else if (type !== 'local' && endpoint) {
+        // Sama seperti efek inisialisasi di atas: nilai lookupNama baru ini
+        // belum tentu ada di cache `rows` lokal (mis. dropdown belum dibuka
+        // sejak prop berubah) — resolve sekali di background.
+        resolveLookupNama(lookupNama);
       }
+
+      prevLookupNamaRef.current = lookupNama;
     } else if (!lookupNama && !deleteClicked && !clicked) {
       setInputValue('');
       setFilters((prev) => ({ ...prev, search: '', filters: {} }));
-    }
 
-    prevLookupNamaRef.current = lookupNama;
+      prevLookupNamaRef.current = lookupNama;
+    }
+    // Kalau perubahan datang saat `clicked`/`deleteClicked` masih aktif,
+    // prevLookupNamaRef sengaja TIDAK diperbarui supaya nilai baru tetap
+    // dianggap "belum diterapkan" dan diproses lagi di render berikutnya —
+    // sebelumnya update seperti ini hilang diam-diam dan input jadi kosong.
   }, [lookupNama, rows, deleteClicked, clicked]);
 
   useEffect(() => {
@@ -1899,16 +2101,15 @@ export default function LookUp({
       }
     };
   }, []);
-
   useEffect(() => {
-    if (forms?.formState.errors) {
+    if (formErrorMessage) {
       setShowError({
         label: label ?? '',
         status: false,
         message: ''
       });
     }
-  }, [forms?.formState.errors, label, name]);
+  }, [formErrorMessage, label]);
 
   // Setelah ini:
   useEffect(() => {
@@ -1935,6 +2136,11 @@ export default function LookUp({
       }, 50);
     }
   }, [errorMessage, formErrorMessage, suppressErrorMessage]);
+  useEffect(() => {
+    if (forms?.formState.isSubmitted || forms?.formState.submitCount) {
+      setSuppressErrorMessage(false);
+    }
+  }, [forms?.formState.submitCount, forms?.formState.isSubmitted]);
   return (
     <Popover open={open} onOpenChange={() => {}}>
       <PopoverTrigger asChild>
@@ -1956,11 +2162,11 @@ export default function LookUp({
                         onPaste={(e) =>
                           handlePaste(e.clipboardData.getData('text'))
                         }
-                        className={`w-full rounded-r-none text-sm text-zinc-900 lg:w-[100%] rounded-none${
+                        className={`w-full rounded-r-none text-sm text-input-text lg:w-[100%] rounded-none${
                           showOnButton && !forInput
                             ? 'rounded-r-none border-r-0'
                             : ''
-                        } border border-zinc-300 pr-10 focus:border-[#adcdff]`}
+                        } border border-input-border pr-10 focus:border-input-border-focus`}
                         disabled={disabled}
                         value={inputValue}
                         onClick={(e) => handleClickInput(e as any)}
@@ -1969,6 +2175,20 @@ export default function LookUp({
                           handleInputChange(e);
                         }}
                       />
+
+                      {suggestionCompletion ? (
+                        <div
+                          aria-hidden="true"
+                          className="pointer-events-none absolute inset-y-0 left-0 flex h-9 items-center overflow-hidden whitespace-pre pl-3 pr-20 text-sm font-normal uppercase tracking-normal text-input-text"
+                        >
+                          <span className="invisible text-sm">
+                            {inputValue}
+                          </span>
+                          <span className="text-sm text-zinc-400">
+                            {suggestionCompletion}
+                          </span>
+                        </div>
+                      ) : null}
 
                       {!forInput && showClearButton ? (
                         <Button
@@ -1991,7 +2211,7 @@ export default function LookUp({
                         <Button
                           type="button"
                           variant="outline"
-                          className="h-9 rounded-l-none border border-[#adcdff] bg-[#e0ecff] text-[#0e2d5f] hover:bg-[#7eafff] hover:text-[#0e2d5f]"
+                          className="h-9 rounded-l-none border border-input-border bg-background-grid-header text-button-text hover:bg-background-input-focus hover:text-button-text"
                           onClick={handleButtonClick}
                           disabled={disabled}
                         >
@@ -2000,11 +2220,14 @@ export default function LookUp({
                       ) : null}
                     </div>
                   </FormControl>
-                  {showError.status === true && label === showError.label ? (
-                    <p className="text-[0.8rem] text-destructive">
-                      {showError.message}
-                    </p>
-                  ) : null}
+                  <p className="text-[0.8rem] text-destructive">
+                    {showError.status === true && label === showError.label
+                      ? showError.message
+                      : !suppressErrorMessage &&
+                        (errorMessage || formErrorMessage)
+                      ? errorMessage || formErrorMessage
+                      : null}
+                  </p>
                 </FormItem>
               )}
             />
@@ -2043,6 +2266,18 @@ export default function LookUp({
                   name={String(name) ?? ''}
                 />
 
+                {suggestionCompletion ? (
+                  <div
+                    aria-hidden="true"
+                    className="pointer-events-none absolute inset-y-0 left-0 flex h-9 items-center overflow-hidden whitespace-pre pl-3 pr-20 text-sm font-normal uppercase tracking-normal text-input-text"
+                  >
+                    <span className="invisible text-sm">{inputValue}</span>
+                    <span className="text-sm text-zinc-400">
+                      {suggestionCompletion}
+                    </span>
+                  </div>
+                ) : null}
+
                 {!forInput && showClearButton ? (
                   <Button
                     type="button"
@@ -2059,7 +2294,7 @@ export default function LookUp({
                   <Button
                     type="button"
                     variant="outline"
-                    className="h-9 rounded-l-none border border-input-border bg-background-grid-header text-button-text hover:bg-background-input-focus hover:text-button-text"
+                    className="h-9 rounded-l-none border border-input-border bg-background-grid-header text-button-text hover:bg-[#7eafff] hover:text-[#0e2d5f]"
                     onClick={handleButtonClick}
                     disabled={disabled}
                   >
@@ -2101,7 +2336,7 @@ export default function LookUp({
                 collapse === true ? 'w-full' : 'w-[100%]'
               } flex-grow overflow-hidden transition-all duration-300`}
             >
-              <div className="min-w-full rounded-lg bg-background">
+              <div className="min-w-full rounded-lg bg-white">
                 <div className="flex h-[25px] w-full flex-row items-center border border-x-0 border-t-0 border-border bg-background-grid-header px-2 py-2">
                   <p className="text-[12px]">{labelLookup}</p>
                 </div>

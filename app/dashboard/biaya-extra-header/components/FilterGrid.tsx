@@ -1,16 +1,13 @@
+// FilterGrid.tsx
 'use client';
 
-import { useDispatch } from 'react-redux';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { IoMdRefresh } from 'react-icons/io';
 import { Button } from '@/components/ui/button';
-import React, { useEffect, useState } from 'react';
-import InputDatePicker from '@/components/custom-ui/InputDatePicker';
-import { setProcessing } from '@/lib/store/loadingSlice/loadingSlice';
+import React, { useState } from 'react';
 import {
-  setOnReload,
-  setSelectedDate,
-  setSelectedDate2,
+  setPending,
+  commitFilter,
   setSelectedJenisOrderan,
   setSelectedJenisOrderanNama
 } from '@/lib/store/filterSlice/filterSlice';
@@ -21,7 +18,7 @@ import { RootState } from '@/lib/store/store';
 
 const FilterGrid = () => {
   const dispatch = useDispatch();
-  const { onReload } = useSelector((state: any) => state.filter);
+  const pending = useSelector((state: RootState) => state.filter.pending);
   const [triggerValidation, setTriggerValidation] = useState(false);
   const { selectedJenisOrderanNama } = useSelector(
     (state: RootState) => state.filter
@@ -46,33 +43,13 @@ const FilterGrid = () => {
   };
 
   const handleValidationResult = (isValid: boolean) => {
-    if (triggerValidation) {
-      if (isValid) {
-        dispatch(setOnReload(true));
-      }
-      setTriggerValidation(false);
-    }
+    if (!triggerValidation) return;
+    setTriggerValidation(false);
+    if (!isValid) return;
+
+    // ✅ Atomic commit — satu action, satu re-render
+    dispatch(commitFilter());
   };
-
-  useEffect(() => {
-    const now = new Date();
-    const fmt = (date: Date) =>
-      `${String(date.getDate()).padStart(2, '0')}-${String(
-        date.getMonth() + 1
-      ).padStart(2, '0')}-${date.getFullYear()}`;
-
-    const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const lastOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-
-    dispatch(setSelectedDate(fmt(firstOfMonth)));
-    dispatch(setSelectedDate2(fmt(lastOfMonth)));
-  }, [dispatch]);
-
-  useEffect(() => {
-    if (onReload) {
-      dispatch(setOnReload(false)); // Simulate a reload operation
-    }
-  }, [onReload]);
 
   return (
     <div className={`flex h-[100%] w-full justify-center`}>
@@ -81,6 +58,10 @@ const FilterGrid = () => {
         <div className="bg-background-header p-4">
           <PeriodeValidation
             label="periode"
+            date1={pending.tglDari}
+            date2={pending.tglSampai}
+            onDate1Change={(val) => dispatch(setPending({ tglDari: val }))}
+            onDate2Change={(val) => dispatch(setPending({ tglSampai: val }))}
             onValidationChange={handleValidationResult}
             triggerValidation={triggerValidation}
           />
@@ -102,6 +83,9 @@ const FilterGrid = () => {
                   onClear={() => {
                     dispatch(setSelectedJenisOrderan(null));
                     dispatch(setSelectedJenisOrderanNama(''));
+                  }}
+                  lookupValue={(value: any) => {
+                    dispatch(setSelectedJenisOrderan(value));
                   }}
                   lookupNama={
                     JENISORDERMUATANNAMA || String(selectedJenisOrderanNama)
