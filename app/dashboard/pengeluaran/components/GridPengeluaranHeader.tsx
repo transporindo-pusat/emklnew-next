@@ -343,12 +343,6 @@ const GridPengeluaranHeader = () => {
   useEffect(() => {
     selectedRowRef.current = selectedRow;
   }, [selectedRow]);
-  // MASTER-DETAIL: id header yang sedang dipilih. Wajib ada di grid yang punya
-  // anak (detail), TIDAK diperlukan di grid mandiri seperti alatbayar.
-  // Alasannya: `selectedRow` itu index ke dalam `rows`, sedangkan `rows` cuma
-  // memuat WINDOW_SIZE halaman yang sedang di-cache. Begitu window bergeser
-  // saat scroll, index lama bisa menunjuk ke luar array -> rows[selectedRow]
-  // undefined. Id ini dipakai untuk menemukan kembali baris yang sama.
   const selectedHeaderIdRef = useRef<string | null>(null);
 
   const {
@@ -3489,13 +3483,6 @@ const GridPengeluaranHeader = () => {
         isLoadingDelete={isLoadingDelete}
         forms={forms}
         mode={mode}
-        // Kirim handler MENTAH, jangan dibungkus forms.handleSubmit di sini.
-        // FormPengeluaran sudah membungkusnya sendiri (onSave/onSaveAndAdd dan
-        // <form onSubmit>) supaya bisa menentukan keepOpenModal. Kalau dibungkus
-        // dua kali, pemanggilan jadi handleSubmit(...)(values, false) padahal
-        // handler RHF bersignature (event): RHF memperlakukan `values` sebagai
-        // event lalu meneruskannya sebagai argumen KEDUA ke sini -> keepOpenModal
-        // terisi objek truthy -> dialog tidak pernah menutup setelah SAVE.
         onSubmit={onSubmit as any}
         isLoadingCreate={isLoadingCreate}
       />

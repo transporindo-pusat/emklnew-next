@@ -47,7 +47,7 @@ const queryClient = new QueryClient({
     queries: {
       refetchOnWindowFocus: false,
       retry: 1,
-      staleTime: 1000 * 60 * 5
+      staleTime: 0
     },
     mutations: {
       // Never retry a mutation that was intentionally cancelled (e.g. offline abort).

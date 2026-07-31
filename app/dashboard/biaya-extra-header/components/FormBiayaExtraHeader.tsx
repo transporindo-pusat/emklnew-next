@@ -62,7 +62,7 @@ const FormBiayaExtraHeader = ({
   const formRef = useRef<HTMLFormElement | null>(null); // Ref untuk form
   const openName = useSelector((state: RootState) => state.lookup.openName);
   const headerData = useSelector((state: RootState) => state.header.headerData);
-  const { selectedJenisOrderan } = useSelector(
+  const { selectedJenisOrderan, selectedJenisOrderanNama } = useSelector(
     (state: RootState) => state.filter
   );
 
@@ -311,11 +311,7 @@ const FormBiayaExtraHeader = ({
                     {...orderan}
                     label={`ORDERAN_${props.rowIdx}_LOOKUP`} // Ensure you use row.id or rowIdx for unique labeling
                     lookupValue={(id) => {
-                      handleInputChange(
-                        props.rowIdx,
-                        'orderanmuatan_id',
-                        id
-                      ); // Use props.rowIdx to get the correct index
+                      handleInputChange(props.rowIdx, 'orderanmuatan_id', id); // Use props.rowIdx to get the correct index
                     }}
                     onSelectRow={(val) =>
                       handleInputChange(
@@ -727,9 +723,17 @@ const FormBiayaExtraHeader = ({
   useEffect(() => {
     if (mode === 'add') {
       forms.setValue('tglbukti', fmt(todayDate));
+      // Field JENIS ORDER di form ini disabled (read-only) — nilainya
+      // mengikuti lookup Jenis Orderan yang sedang dipilih di FilterGrid,
+      // bukan dipilih ulang di sini.
+      forms.setValue('jenisorder_id', selectedJenisOrderan ?? '');
+      forms.setValue('jenisorder_nama', selectedJenisOrderanNama ?? '');
     }
-  }, [popOver, mode]);
-
+  }, [popOver, mode, selectedJenisOrderan, selectedJenisOrderanNama]);
+  console.log('forms.getValues()', forms.getValues());
+  console.log('forms.errors', forms.formState.errors);
+  console.log('selectedJenisOrderanNama', selectedJenisOrderanNama);
+  console.log('selectedJenisOrderan', selectedJenisOrderan);
   // useEffect(() => {
   //   if (forms.getValues()?.details?.length === 0) {
   //     setRows([
@@ -783,7 +787,13 @@ const FormBiayaExtraHeader = ({
             <Form {...forms}>
               <form
                 ref={formRef}
-                onSubmit={onSubmit}
+                // `onSubmit` dari grid adalah handler MENTAH bertanda tangan
+                // (values, keepOpenModal), jadi pembungkusan handleSubmit
+                // dilakukan di sini. Tanpa ini, submit native mengirim objek
+                // EVENT sebagai `values` -> payload ke backend kosong.
+                onSubmit={forms.handleSubmit((values: any) =>
+                  onSubmit(values, false)
+                )}
                 className="flex h-full flex-col gap-6"
               >
                 <div className="flex h-[100%] flex-col gap-2 lg:gap-3">
@@ -962,12 +972,19 @@ const FormBiayaExtraHeader = ({
         </div>
         <FormFooterButtons
           mode={mode}
+          // WAJIB lewat forms.handleSubmit: `onSubmit` grid menerima
+          // (values, keepOpenModal). Versi sebelumnya memanggil
+          // onSubmit(false)/onSubmit(true) sehingga boolean itu masuk sebagai
+          // `values` -> `...values` menyebar boolean (tidak menghasilkan apa
+          // pun) dan `values?.details` undefined, jadi body yang terkirim ke
+          // backend cuma berisi spread `filters`. Sekaligus mengaktifkan
+          // kembali validasi zod yang sebelumnya ikut terlewat.
           onSave={() => {
-            onSubmit(false);
+            void forms.handleSubmit((values: any) => onSubmit(values, false))();
             dispatch(setSubmitClicked(true));
           }}
           onSaveAndAdd={() => {
-            onSubmit(true);
+            void forms.handleSubmit((values: any) => onSubmit(values, true))();
             dispatch(setSubmitClicked(true));
           }}
           onCancel={handleClose}

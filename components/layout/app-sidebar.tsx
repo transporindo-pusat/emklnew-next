@@ -251,7 +251,7 @@ export default function AppSidebar({
 
   const { data: allMenu } = useGetSearchMenu({ search: searchQuery, userId });
   const searchResults = React.useMemo(
-    () => (searchQuery ? allMenu ?? [] : []),
+    () => (searchQuery ? allMenu?.data ?? [] : []),
     [searchQuery, allMenu]
   );
 

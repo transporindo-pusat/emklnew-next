@@ -69,7 +69,7 @@ const GridUserAcl = () => {
     resolver: zodResolver(userAclSchema),
     mode: 'onTouched',
     defaultValues: {
-      userId: 0,
+      userId: '',
       data: []
     }
   });
@@ -179,7 +179,7 @@ const GridUserAcl = () => {
   const handleEdit = () => {
     if (selectedRow !== null) {
       const rowData = rows[selectedRow];
-      forms.setValue('userId', Number(userAclDetail?.id));
+      forms.setValue('userId', String(userAclDetail?.id ?? ''));
     }
     setPopOver(true);
   };
