@@ -28,7 +28,13 @@ export const useGetGroupbiayaextra = (
     ['groupbiayaextra', filters],
     async () => await getGroupbiayaextraFn(filters, signal),
     {
-      enabled: !signal?.aborted
+      // Jangan fetch saat page < 1 (mis. trik setCurrentPage(0) untuk memaksa
+      // refetch halaman yang sama pada windowed pagination). Backend menolak
+      // page=0 (min 1) → 400. cacheTime:0 tetap menjamin refetch saat page
+      // kembali ke nilai valid.
+      enabled: !signal?.aborted && (filters.page ?? 1) >= 1,
+      staleTime: 0,
+      cacheTime: 0
     }
   );
 };
