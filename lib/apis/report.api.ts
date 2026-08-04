@@ -26,6 +26,13 @@ export const generateGroupbiayaextraReportFn = async (
   return response.data;
 };
 
+export const generateAsuransiReportFn = async (
+  payload: ReportJobPayload
+): Promise<ReportJobResponse> => {
+  const response = await api2.post('/asuransi/report', payload);
+  return response.data;
+};
+
 /**
  * Mengunduh hasil render. `downloadPath` diambil apa adanya dari event socket
  * (`/report/download/<jobId>`) supaya frontend tidak menebak-nebak URL-nya.
