@@ -7,7 +7,11 @@ import ReportPdfViewer from '@/components/custom-ui/ReportPdfViewer';
 
 type ReportPdfContextValue = Pick<
   ReturnType<typeof useReportPdf>,
-  'generateReport' | 'dismissToast' | 'openViewer' | 'closeViewer'
+  | 'generateReport'
+  | 'generateExport'
+  | 'dismissToast'
+  | 'openViewer'
+  | 'closeViewer'
 >;
 
 const ReportPdfContext = createContext<ReportPdfContextValue | null>(null);
@@ -22,6 +26,7 @@ export function ReportPdfProvider({ children }: { children: React.ReactNode }) {
     toasts,
     viewer,
     generateReport,
+    generateExport,
     dismissToast,
     openViewer,
     closeViewer
@@ -29,7 +34,13 @@ export function ReportPdfProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <ReportPdfContext.Provider
-      value={{ generateReport, dismissToast, openViewer, closeViewer }}
+      value={{
+        generateReport,
+        generateExport,
+        dismissToast,
+        openViewer,
+        closeViewer
+      }}
     >
       {children}
 

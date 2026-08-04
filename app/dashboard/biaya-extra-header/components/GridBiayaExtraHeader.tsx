@@ -110,6 +110,8 @@ import {
   BiayaExtraHeader,
   filterBiayaExtraHeader
 } from '@/lib/types/biayaextraheader.type';
+import { generateBiayaExtraHeaderExportFn } from '@/lib/apis/report.api';
+import { useReportPdfContext } from '@/hooks/ReportPdfProvider';
 
 interface Filter {
   page: number;
@@ -130,6 +132,7 @@ const GridBiayaExtraHeader = () => {
   const dispatch = useDispatch();
   const searchParams = useSearchParams();
   const { start } = useReportProgress();
+  const { generateExport } = useReportPdfContext();
   const { data: session, status } = useSession();
 
   const [totalPages, setTotalPages] = useState(1);
@@ -566,21 +569,12 @@ const GridBiayaExtraHeader = () => {
         renderCell: (props: any) => {
           const columnFilter = filters.filters.nobukti || '';
           const value = props.row.nobukti; // atau dari props.row
-          // Buat component wrapper untuk highlightText
-          const HighlightWrapper = () => {
-            return highlightText(value, filters.search, columnFilter);
-          };
-
           return (
             <div
               title={value}
               className="m-0 flex h-full cursor-pointer items-center p-0 text-sm"
             >
-              <JsxParser
-                components={{ HighlightWrapper }}
-                jsx={props.row.link}
-                renderInWrapper={false}
-              />
+              {highlightText(value, filters.search, columnFilter)}
             </div>
           );
         }
@@ -1926,15 +1920,6 @@ const GridBiayaExtraHeader = () => {
     values: biayaExtraHeaderInput,
     keepOpenModalArg: unknown = false
   ) => {
-    // react-hook-form memanggil callback-nya dengan (values, event). Form di
-    // FormBiayaExtraHeader dipasang `onSubmit={forms.handleSubmit(onSubmit)}`, jadi
-    // pada submit NATIVE (mis. tekan ENTER di sebuah field) argumen kedua yang
-    // masuk ke sini adalah objek EVENT -- truthy, bukan boolean. Tanpa
-    // penyempitan ke `=== true`, Enter diperlakukan seperti "SAVE & ADD":
-    // form di-reset tapi dialog TETAP TERBUKA, Radix FocusScope menjebak fokus
-    // di dalam dialog, dan grid di belakangnya tampak "tidak ter-focus" padahal
-    // barisnya sudah dipilih dengan benar. Hanya tombol SAVE & ADD yang boleh
-    // mengirim true (lihat FormBiayaExtraHeader onSaveAndAdd).
     const keepOpenModal = keepOpenModalArg === true;
     clearError();
     const selectedRowId = rows[selectedRow]?.id;
@@ -2026,17 +2011,6 @@ const GridBiayaExtraHeader = () => {
       }
 
       if (selectedRowId && mode === 'edit') {
-        // JANGAN invalidateQueries('biayaextraheader') setelah ini: refetch-nya
-        // menimpa baris + fokus yang baru di-set onSuccess sehingga grid
-        // balik ke baris 1. onSuccess sudah otoritatif (lihat useAlatbayar).
-        //
-        // `id` WAJIB ikut di BODY, bukan cuma di URL: UpdateBiayaExtraHeaderSchema
-        // di backend mendeklarasikan `id: z.string({ required_error: 'Id wajib
-        // diisi untuk update' })`, dan form ini tidak pernah meng-setValue('id')
-        // (defaultValues juga tanpa id). Tanpa baris ini PUT selalu 400 dengan
-        // path ['id'] -> setError('id') jatuh ke field yang tidak dirender,
-        // sehingga tombol SAVE tampak "diam saja". Beda dengan pengeluaranheader
-        // yang DTO update-nya PartialType(CreateDto) -> id tidak wajib.
         await updateBiayaExtraHeader(
           {
             id: selectedRowId as unknown as string,
@@ -2091,6 +2065,31 @@ const GridBiayaExtraHeader = () => {
       setMode('view');
       setPopOver(true);
     }
+  };
+
+  /**
+   * Export Excel dijalankan di BACKEND (background job + socket), sama seperti
+   * di Alat Bayar. Frontend hanya mengirim filter yang sedang aktif di grid —
+   * filter kolom, search global, rentang tanggal, jenis orderan, dan sort —
+   * lalu progresnya muncul di toast. Setelah selesai, toast menampilkan tombol
+   * Download untuk menyimpan file xlsx-nya.
+   *
+   * Beda dengan Print yang mencetak SATU bukti terpilih, export ini mengambil
+   * seluruh baris yang lolos filter.
+   */
+  const handleExportExcel = async () => {
+    const { page, limit, ...filtersWithoutLimit } = filters;
+
+    await generateExport({
+      label: 'Export Biaya Extra',
+      payload: {
+        search: filtersWithoutLimit.search,
+        filters: filtersWithoutLimit.filters,
+        sortBy: filtersWithoutLimit.sortBy,
+        sortDirection: filtersWithoutLimit.sortDirection
+      },
+      apiFn: generateBiayaExtraHeaderExportFn
+    });
   };
 
   const handleReport = async () => {
@@ -3041,6 +3040,12 @@ const GridBiayaExtraHeader = () => {
                 icon: <FaPrint />,
                 onClick: () => handleReport(),
                 className: 'bg-cyan-500 hover:bg-cyan-700'
+              },
+              {
+                label: 'Export',
+                icon: <FaFileExport />,
+                onClick: () => handleExportExcel(),
+                className: 'bg-green-600 hover:bg-green-700'
               }
             ]}
           />

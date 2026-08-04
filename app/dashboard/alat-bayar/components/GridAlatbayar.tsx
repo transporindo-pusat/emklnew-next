@@ -99,6 +99,8 @@ import {
 import { getAlatbayarFn } from '@/lib/apis/alatbayar.api';
 import { useReportProgress } from '@/components/custom-ui/ReportProgressProvider';
 import { loadStimulsoftScript } from '@/lib/loadStimulsoft';
+import { useReportPdfContext } from '@/hooks/ReportPdfProvider';
+import { generateAlatbayarExportFn } from '@/lib/apis/report.api';
 
 interface Filter {
   page: number;
@@ -160,6 +162,7 @@ const GridAlatbayar = () => {
   const suppressScrollRef = useRef(false);
   const isPageTransitionRef = useRef(false);
   const { start } = useReportProgress();
+  const { generateExport } = useReportPdfContext();
 
   const lastScrollTopRef = useRef<number>(0);
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -2123,6 +2126,28 @@ const GridAlatbayar = () => {
     }
   };
 
+  /**
+   * Export Excel dijalankan di BACKEND (background job + socket), sama seperti
+   * alur cetak laporan. Frontend hanya mengirim filter yang sedang aktif di
+   * grid — filter kolom, search global, dan sort — lalu progresnya muncul di
+   * toast. Setelah selesai, toast menampilkan tombol Download untuk menyimpan
+   * file xlsx-nya.
+   */
+  const handleExportExcel = async () => {
+    const { page, limit, ...filtersWithoutLimit } = filters;
+
+    await generateExport({
+      label: 'Export Alat Bayar',
+      payload: {
+        search: filtersWithoutLimit.search,
+        filters: filtersWithoutLimit.filters,
+        sortBy: filtersWithoutLimit.sortBy,
+        sortDirection: filtersWithoutLimit.sortDirection
+      },
+      apiFn: generateAlatbayarExportFn
+    });
+  };
+
   const handleReport = async () => {
     const job = start('Alat Bayar', 'pdf');
 
@@ -2947,6 +2972,12 @@ const GridAlatbayar = () => {
                 shortcut: 'P',
                 onClick: () => handleReport(),
                 className: 'bg-cyan-500 hover:bg-cyan-700'
+              },
+              {
+                label: 'Export',
+                icon: <FaFileExport />,
+                onClick: () => handleExportExcel(),
+                className: 'bg-green-600 hover:bg-green-700'
               }
             ]}
           />

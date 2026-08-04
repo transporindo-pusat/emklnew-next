@@ -2,11 +2,17 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
-import { downloadReportPdfFn } from '@/lib/apis/report.api';
+import {
+  downloadReportFileFn,
+  EXCEL_MIME,
+  PDF_MIME
+} from '@/lib/apis/report.api';
 
 /**
  * Socket report menempel di backend EMKL (NEXT_PUBLIC_BASE_URL2), namespace
  * `/report` — sama dengan endpoint REST-nya, jadi tidak perlu env baru.
+ * Export Excel memakai kanal yang sama; yang membedakan hanya jenis berkas
+ * hasilnya (lihat ReportToastKind).
  */
 const WS_BASE = process.env.NEXT_PUBLIC_BASE_URL2 ?? 'http://localhost:5004';
 
@@ -17,16 +23,22 @@ export type ReportToastStatus =
   | 'done'
   | 'error';
 
+/** pdf = cetak laporan (dibuka di viewer), excel = export (diunduh). */
+export type ReportToastKind = 'pdf' | 'excel';
+
 /** Aksi tombol Export di toolbar viewer — dipasok modul pemanggil. */
 export type ReportExportHandler = () => void | Promise<void>;
 
 export interface ReportToast {
   jobId: string;
   label: string;
+  kind: ReportToastKind;
   step: string;
   percent: number;
   status: ReportToastStatus;
   blobUrl?: string;
+  /** Nama file saat diunduh (job excel) — diambil dari header backend. */
+  filename?: string;
   onExport?: ReportExportHandler;
   error?: string;
 }
@@ -50,9 +62,22 @@ export interface GenerateReportOptions {
   onExport?: ReportExportHandler;
 }
 
+/** Opsi export Excel — sama seperti report, hanya tanpa viewer/onExport. */
+export type GenerateExportOptions = Omit<GenerateReportOptions, 'onExport'>;
+
+const KIND_MIME: Record<ReportToastKind, string> = {
+  pdf: PDF_MIME,
+  excel: EXCEL_MIME
+};
+
+const KIND_LABEL: Record<ReportToastKind, string> = {
+  pdf: 'PDF',
+  excel: 'Excel'
+};
+
 /**
- * Mengelola antrean job cetak PDF: kirim request, dengarkan progres lewat
- * socket, unduh hasilnya, dan sediakan state untuk toast.
+ * Mengelola antrean job cetak PDF dan export Excel: kirim request, dengarkan
+ * progres lewat socket, unduh hasilnya, dan sediakan state untuk toast.
  */
 export function useReportPdf() {
   const [toasts, setToasts] = useState<ReportToast[]>([]);
@@ -86,22 +111,30 @@ export function useReportPdf() {
     };
   }, []);
 
-  const fetchAndStorePdf = useCallback(
-    async (jobId: string, downloadPath: string) => {
-      updateToast(jobId, { status: 'fetching', step: 'Mengunduh PDF…' });
+  const fetchAndStoreFile = useCallback(
+    async (jobId: string, downloadPath: string, kind: ReportToastKind) => {
+      const berkas = KIND_LABEL[kind];
+      updateToast(jobId, {
+        status: 'fetching',
+        step: `Mengunduh ${berkas}…`
+      });
       try {
-        const blob = await downloadReportPdfFn(downloadPath);
+        const { blob, filename } = await downloadReportFileFn(
+          downloadPath,
+          KIND_MIME[kind]
+        );
         const blobUrl = URL.createObjectURL(blob);
         updateToast(jobId, {
           status: 'done',
-          step: 'PDF siap!',
+          step: `${berkas} siap!`,
           percent: 100,
-          blobUrl
+          blobUrl,
+          filename
         });
       } catch (err: any) {
         updateToast(jobId, {
           status: 'error',
-          step: 'Gagal mengunduh PDF',
+          step: `Gagal mengunduh ${berkas}`,
           error: err?.message ?? 'Unknown error'
         });
       }
@@ -110,14 +143,21 @@ export function useReportPdf() {
   );
 
   /**
-   * Hanya membuang toast dari daftar — blobUrl TIDAK di-revoke di sini,
-   * karena dipanggil juga tepat setelah "Lihat Laporan" (url-nya sudah
-   * dipegang state viewer). Revoke terjadi di closeViewer.
+   * Membuang toast dari daftar. Untuk job excel blobUrl langsung di-revoke
+   * (tidak ada pemilik lain), sedangkan untuk pdf TIDAK — dismiss juga
+   * dipanggil tepat setelah "Lihat Laporan" dan url-nya sudah dipegang state
+   * viewer. Revoke pdf terjadi di closeViewer.
    */
   const dismissToast = useCallback(
     (jobId: string) => {
       disconnectJob(jobId);
-      setToasts((prev) => prev.filter((t) => t.jobId !== jobId));
+      setToasts((prev) =>
+        prev.filter((t) => {
+          if (t.jobId !== jobId) return true;
+          if (t.kind === 'excel' && t.blobUrl) URL.revokeObjectURL(t.blobUrl);
+          return false;
+        })
+      );
     },
     [disconnectJob]
   );
@@ -137,8 +177,8 @@ export function useReportPdf() {
     });
   }, []);
 
-  const generateReport = useCallback(
-    async (opts: GenerateReportOptions) => {
+  const runJob = useCallback(
+    async (opts: GenerateReportOptions, kind: ReportToastKind) => {
       // Toast muncul sebelum jobId ada supaya user langsung dapat feedback;
       // id sementara ini ditukar dengan jobId asli begitu request balas.
       const tempId = crypto.randomUUID();
@@ -148,6 +188,7 @@ export function useReportPdf() {
         {
           jobId: tempId,
           label: opts.label,
+          kind,
           step: 'Mempersiapkan…',
           percent: 0,
           status: 'connecting',
@@ -206,7 +247,7 @@ export function useReportPdf() {
             if (data.status === 'done') {
               updateToast(jobId, { percent: 100, step: data.step });
               disconnectJob(jobId);
-              void fetchAndStorePdf(jobId, data.downloadUrl!);
+              void fetchAndStoreFile(jobId, data.downloadUrl!, kind);
               return;
             }
 
@@ -240,13 +281,25 @@ export function useReportPdf() {
         );
       }
     },
-    [updateToast, disconnectJob, fetchAndStorePdf]
+    [updateToast, disconnectJob, fetchAndStoreFile]
+  );
+
+  const generateReport = useCallback(
+    (opts: GenerateReportOptions) => runJob(opts, 'pdf'),
+    [runJob]
+  );
+
+  /** Export Excel background — toast-nya berakhir dengan tombol Download. */
+  const generateExport = useCallback(
+    (opts: GenerateExportOptions) => runJob(opts, 'excel'),
+    [runJob]
   );
 
   return {
     toasts,
     viewer,
     generateReport,
+    generateExport,
     dismissToast,
     openViewer,
     closeViewer
