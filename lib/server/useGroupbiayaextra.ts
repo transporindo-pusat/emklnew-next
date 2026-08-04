@@ -41,17 +41,15 @@ export const useGetGroupbiayaextra = (
 
 export const useCreateGroupbiayaextra = () => {
   const { setError } = useFormError();
-  const queryClient = useQueryClient();
   const { alert } = useAlert();
 
+  // Sengaja TIDAK invalidateQueries('groupbiayaextra') di sini. Alur onSuccess
+  // di GridGroupbiayaextra sudah otoritatif: ia mengambil window baru dari redis
+  // lalu setCurrentPage(pageNumber) yang memicu refetch halaman yang BENAR.
+  // invalidateQueries malah me-refetch `currentPage` yang mungkin masih basi —
+  // hasilnya tiba paling akhir dan menimpa fokus by-id -> baris fokus loncat ke
+  // baris 1.
   return useMutation(storeGroupbiayaextraFn, {
-    onSuccess: () => {
-      void queryClient.invalidateQueries('groupbiayaextra');
-      // toast({
-      //   title: 'Proses Berhasil',
-      //   description: 'Data Berhasil Ditambahkan'
-      // });
-    },
     onError: (error: AxiosError) => {
       const errorResponse = error.response?.data as IErrorResponse;
       if (errorResponse !== undefined) {
@@ -95,12 +93,11 @@ export const useDeleteGroupbiayaextra = () => {
 };
 export const useUpdateGroupbiayaextra = () => {
   const { setError } = useFormError();
-  const queryClient = useQueryClient();
 
+  // Sama seperti create: JANGAN invalidateQueries di sini. onSuccess grid yang
+  // mengatur data + fokus; invalidateQueries me-refetch currentPage basi yang
+  // menimpa fokus -> baris 1.
   return useMutation(updateGroupbiayaextraFn, {
-    onSuccess: () => {
-      void queryClient.invalidateQueries('groupbiayaextra');
-    },
     onError: (error: AxiosError) => {
       const errorResponse = error.response?.data as IErrorResponse;
       if (errorResponse !== undefined) {

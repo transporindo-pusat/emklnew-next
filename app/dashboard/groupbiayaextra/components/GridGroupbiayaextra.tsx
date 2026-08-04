@@ -31,7 +31,14 @@ import {
 
 import { useSelector } from 'react-redux';
 import { RootState } from '@/lib/store/store';
-import { FaPrint, FaSort, FaSortDown, FaSortUp, FaTimes } from 'react-icons/fa';
+import {
+  FaFileExport,
+  FaPrint,
+  FaSort,
+  FaSortDown,
+  FaSortUp,
+  FaTimes
+} from 'react-icons/fa';
 import { Input } from '@/components/ui/input';
 import { api2 } from '@/lib/utils/AxiosInstance';
 import { useRouter } from 'next/navigation';
@@ -74,11 +81,11 @@ import {
   saveGridConfig
 } from '@/lib/utils';
 
+import { getGroupbiayaextraFn } from '@/lib/apis/groupbiayaextra.api';
 import {
-  exportGroupbiayaextraFn,
-  getGroupbiayaextraFn
-} from '@/lib/apis/groupbiayaextra.api';
-import { generateGroupbiayaextraReportFn } from '@/lib/apis/report.api';
+  generateGroupbiayaextraExportFn,
+  generateGroupbiayaextraReportFn
+} from '@/lib/apis/report.api';
 import { useReportPdfContext } from '@/hooks/ReportPdfProvider';
 
 interface Filter {
@@ -132,7 +139,7 @@ const GridGroupbiayaextra = () => {
   const pendingSelectIdxRef = useRef<number>(1); // default ke idx 1 (skip nomor/select)
   const suppressScrollRef = useRef(false);
   const isPageTransitionRef = useRef(false);
-  const { generateReport } = useReportPdfContext();
+  const { generateReport, generateExport } = useReportPdfContext();
 
   const lastScrollTopRef = useRef<number>(0);
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -1536,7 +1543,9 @@ const GridGroupbiayaextra = () => {
   };
 
   const onSuccess = async (
-    globalItemIndex: number,
+    indexOnPage: number,
+    fetchedPages: number[],
+    pagedData: Record<string, IGroupbiayaextra[]>,
     pageNumber: number,
     keepOpenModal = false,
     focusId: string | null = null
@@ -1569,73 +1578,48 @@ const GridGroupbiayaextra = () => {
         // baris 1"). Dibuka lagi via setTimeout di bawah.
         suppressRefetchRef.current = true;
 
-        // CATATAN KONTRAK BACKEND: endpoint groupbiayaextra hanya mengembalikan
-        // { itemIndex (index GLOBAL), pageNumber } dan menyimpan SATU key redis
-        // berisi dataset (bukan pagedData per halaman seperti alatbayar). Jadi
-        // window WINDOW_SIZE halaman dirakit di sini dari dataset tersebut agar
-        // arsitektur windowed pagination tetap konsisten.
-        const response = await api2.get(`/redis/get/groupbiayaextra-allItems`);
-        const allItems: IGroupbiayaextra[] = Array.isArray(response.data)
+        // KONTRAK BACKEND (sama seperti alatbayar): endpoint mengembalikan
+        // { itemIndex (index DALAM window), fetchedPages, pagedData, pageNumber }
+        // dan menyimpan window-nya di redis per halaman
+        // (`groupbiayaextra-page-<n>`), jadi window tidak perlu dirakit ulang
+        // di sini.
+        const response = await api2.get(
+          `/redis/get/groupbiayaextra-page-${pageNumber}`
+        );
+        const loadedRows: IGroupbiayaextra[] = Array.isArray(response.data)
           ? response.data
           : [];
 
-        const limit = filters.limit;
-        const totalPgs = Math.max(1, Math.ceil(allItems.length / limit));
-
-        // Window dipusatkan di halaman baris yang baru disimpan, lalu dijepit
-        // agar tidak keluar dari rentang halaman yang tersedia.
-        const desiredStart = pageNumber - Math.floor(WINDOW_SIZE / 2);
-        const maxStart = Math.max(1, totalPgs - WINDOW_SIZE + 1);
-        const startPage = Math.min(Math.max(1, desiredStart), maxStart);
-
-        const windowPages = Array.from(
-          { length: WINDOW_SIZE },
-          (_, i) => startPage + i
-        ).filter((p) => p <= totalPgs);
-
-        const newCache = new Map<number, IGroupbiayaextra[]>();
-        windowPages.forEach((p) => {
-          const pageData = allItems.slice((p - 1) * limit, p * limit);
-          if (pageData.length > 0) newCache.set(p, pageData);
-        });
-
-        const combinedRows = windowPages.flatMap((p) => newCache.get(p) ?? []);
-
-        // Fokus BERDASARKAN ID baris, bukan index dari backend. Setelah edit,
-        // posisi baris di window yang dimuat bisa berbeda dari hitungan index
-        // backend (mis. tie-break urutan keterangan) sehingga fokus meleset.
-        // Fallback: index global dikurangi offset halaman pertama window.
+        // Fokus BERDASARKAN ID baris, bukan indexOnPage dari backend. Setelah
+        // edit, posisi baris di window yang dimuat bisa berbeda dari hitungan
+        // index backend (mis. tie-break urutan keterangan) sehingga fokus
+        // meleset. Fallback ke indexOnPage bila id tak ketemu.
         const focusIdx =
           focusId != null
-            ? combinedRows.findIndex((r) => String(r.id) === String(focusId))
+            ? loadedRows.findIndex((r) => String(r.id) === String(focusId))
             : -1;
-        const targetIndex =
-          focusIdx >= 0
-            ? focusIdx
-            : Math.max(
-                0,
-                Math.min(
-                  globalItemIndex - (windowPages[0] - 1) * limit,
-                  Math.max(0, combinedRows.length - 1)
-                )
-              );
+        const targetIndex = focusIdx >= 0 ? focusIdx : indexOnPage;
 
         setIsDataUpdated(true);
         setShouldBulkFetch(false);
-        setRows(combinedRows);
-        setVisiblePages(windowPages);
+        setRows([]);
+        setRows(loadedRows);
+        setVisiblePages(fetchedPages);
         setSelectedRow(targetIndex);
         selectedRowRef.current = targetIndex;
-        setPageDataCache(newCache);
-        // Dataset redis pada mode edit hanya berisi item s/d halaman terkait,
-        // jadi totalPages hasil hitungan di sini bisa lebih kecil dari yang
-        // sebenarnya — jangan menurunkan nilai yang sudah diketahui.
-        setTotalPages((prev) => Math.max(prev, totalPgs));
+        setPageDataCache(
+          new Map(
+            Object.entries(pagedData).map(([key, value]) => [
+              Number(key),
+              value as IGroupbiayaextra[]
+            ])
+          )
+        );
         setCurrentPage(pageNumber);
 
         const updatedBuffer = new Map(streamBufferRef.current);
-        newCache.forEach((value, key) => {
-          updatedBuffer.set(key, value);
+        Object.entries(pagedData).forEach(([key, value]) => {
+          updatedBuffer.set(Number(key), value as IGroupbiayaextra[]);
         });
         streamBufferRef.current = updatedBuffer;
 
@@ -1759,6 +1743,8 @@ const GridGroupbiayaextra = () => {
             onSuccess: (data: any) =>
               onSuccess(
                 data.itemIndex,
+                data.fetchedPages,
+                data.pagedData,
                 data.pageNumber,
                 keepOpenModal,
                 data.newItem?.id ?? null
@@ -1781,6 +1767,8 @@ const GridGroupbiayaextra = () => {
             onSuccess: (data: any) =>
               onSuccess(
                 data.itemIndex,
+                data.fetchedPages,
+                data.pagedData,
                 data.pageNumber,
                 false,
                 data.updatedItem?.id ?? selectedRowId ?? null
@@ -1842,22 +1830,20 @@ const GridGroupbiayaextra = () => {
     });
   };
 
-  const handleExportExcel = async (exportFilters: any) => {
-    try {
-      const response = await exportGroupbiayaextraFn({ ...exportFilters });
+  const handleExportExcel = async (exportFilters?: any) => {
+    const { page, limit, ...filtersWithoutLimit } = filters;
+    const activeFilters = exportFilters ?? filtersWithoutLimit;
 
-      const url = window.URL.createObjectURL(new Blob([response]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `laporan_groupbiayaextra_${Date.now()}.xlsx`;
-      document.body.appendChild(link);
-      link.click();
-
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(link);
-    } catch (error) {
-      console.error('Error exporting groupbiayaextra data:', error);
-    }
+    await generateExport({
+      label: 'Export Group Biaya Extra',
+      payload: {
+        search: activeFilters.search,
+        filters: activeFilters.filters,
+        sortBy: activeFilters.sortBy,
+        sortDirection: activeFilters.sortDirection
+      },
+      apiFn: generateGroupbiayaextraExportFn
+    });
   };
 
   document.querySelectorAll('.column-headers').forEach((element) => {
@@ -2583,6 +2569,12 @@ const GridGroupbiayaextra = () => {
                 shortcut: 'P',
                 onClick: () => handleReport(),
                 className: 'bg-cyan-500 hover:bg-cyan-700'
+              },
+              {
+                label: 'Export',
+                icon: <FaFileExport />,
+                onClick: () => handleExportExcel(),
+                className: 'bg-green-600 hover:bg-green-700'
               }
             ]}
           />

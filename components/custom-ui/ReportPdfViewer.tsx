@@ -175,7 +175,7 @@ function ReportPdfViewerContent({
         </div>
       </div>
 
-      <div className="flex h-full w-full flex-col">
+      <div className="flex h-full min-h-0 w-full flex-col">
         {/* Header modal — satu-satunya beda dengan halaman /reports/*:
             di sini butuh judul + tombol tutup. */}
         <div className="flex flex-row items-center justify-between bg-[#e0ecff] px-3 py-2">
@@ -237,7 +237,24 @@ const ReportPdfViewer: React.FC<ReportPdfViewerProps> = ({
       }}
     >
       <DialogTitle hidden={true}>{title}</DialogTitle>
-      <DialogContent className="h-full min-w-full overflow-hidden bg-white p-0">
+      {/* Tinggi dikunci lewat `style`, bukan className: base DialogContent
+          sudah memasang `overflow-y-scroll`, dan pemenang antar utility
+          Tailwind ditentukan urutan di stylesheet — bukan urutan di atribut
+          class — sehingga `overflow-hidden` dari sini akan kalah.
+          `gridTemplateRows: minmax(0, 1fr)` membuat baris grid-nya definit;
+          tanpa itu baris `auto` + anak `h-full` jadi kasus siklik, tinggi
+          runtuh ke `auto`, dan `.rpv-core__inner-pages` (scroller milik
+          react-pdf-viewer) ikut setinggi seluruh dokumen sehingga tidak
+          pernah bisa di-scroll. */}
+      <DialogContent
+        className="min-w-full bg-white p-0"
+        style={{
+          height: '100dvh',
+          maxHeight: '100dvh',
+          gridTemplateRows: 'minmax(0, 1fr)',
+          overflow: 'hidden'
+        }}
+      >
         <ReportPdfViewerContent
           url={url}
           title={title}
