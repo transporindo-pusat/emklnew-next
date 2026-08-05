@@ -27,10 +27,7 @@ import {
   FormLabel,
   FormMessage
 } from '@/components/ui/form';
-import {
-  JENISORDERMUATAN,
-  JENISORDERMUATANNAMA
-} from '@/constants/bookingorderan';
+import { JENISORDERMUATANNAMA } from '@/constants/bookingorderan';
 
 const FormJobParty = ({
   forms,
@@ -41,8 +38,8 @@ const FormJobParty = ({
   // popOver,
   onSubmit,
   isLoadingCreate // mode,
-  // isLoadingUpdate,
-} // isLoadingDelete
+  // isLoadingDelete
+} // isLoadingUpdate,
 : any) => {
   const { theme, resolvedTheme } = useTheme();
   const isDark = theme === 'dark' || resolvedTheme === 'dark';
@@ -324,11 +321,7 @@ const FormJobParty = ({
                     {...propsScheduleLookup}
                     label={`SCHEDULE_PARTY_${props.rowIdx}`} // Ensure you use row.id or rowIdx for unique labeling
                     lookupValue={(id) => {
-                      handleInputChange(
-                        props.rowIdx,
-                        'schedule_id',
-                        id
-                      );
+                      handleInputChange(props.rowIdx, 'schedule_id', id);
                     }}
                     onSelectRow={(val) => {
                       handleInputChange(
@@ -546,11 +539,7 @@ const FormJobParty = ({
                     {...propsdaftarblLookup}
                     label={`DAFTARBL_PARTY_${props.rowIdx}`} // Ensure you use row.id or rowIdx for unique labeling
                     lookupValue={(id) => {
-                      handleInputChange(
-                        props.rowIdx,
-                        'daftarbl_id',
-                        id
-                      );
+                      handleInputChange(props.rowIdx, 'daftarbl_id', id);
                     }}
                     onSelectRow={(val) => {
                       handleInputChange(
@@ -594,11 +583,7 @@ const FormJobParty = ({
                   {...propshargatruckingLookup}
                   label={`HARGATRUCKING_PARTY_${props.rowIdx}`} // Ensure you use row.id or rowIdx for unique labeling
                   lookupValue={(id) => {
-                    handleInputChange(
-                      props.rowIdx,
-                      'hargatrucking',
-                      id
-                    );
+                    handleInputChange(props.rowIdx, 'hargatrucking', id);
                   }}
                   onSelectRow={(val) => {
                     handleInputChange(
@@ -778,13 +763,16 @@ const FormJobParty = ({
 
   useEffect(() => {
     forms.setValue('nobukti', '');
-    forms.setValue('jenisorder_id', JENISORDERMUATAN);
-    forms.setValue('jenisorder_nama', JENISORDERMUATANNAMA);
+    forms.setValue('jenisorder_id', String(selectedJenisOrderan ?? ''));
+    forms.setValue(
+      'jenisorder_nama',
+      selectedJenisOrderanNama || JENISORDERMUATANNAMA
+    );
 
     if (partyCount != 0) {
       setPartyCount(0);
     }
-  }, [forms, openForm]);
+  }, [forms, openForm, selectedJenisOrderan, selectedJenisOrderanNama]);
 
   useEffect(() => {
     if (rows) {

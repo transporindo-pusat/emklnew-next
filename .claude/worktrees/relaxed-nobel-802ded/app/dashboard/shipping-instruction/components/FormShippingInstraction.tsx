@@ -293,7 +293,7 @@ const FormShippingInstruction = ({
         orderan_id: Number(item.orderan_id) ?? 0,
         daftarbl_id: Number(item.daftarbl_id) ?? 0,
         containerpelayaran_id: Number(item.pelayarancontainer_id) ?? 0,
-        emkllain_id: Number(item.emkllain_id) ?? 0,
+        emkl_id: Number(item.emkl_id) ?? 0,
         tujuankapal_id: Number(item.tujuankapal_id) ?? 0,
         shippinginstructiondetail_nobukti: '',
         asalpelabuhan: '',
@@ -1173,7 +1173,7 @@ const FormShippingInstruction = ({
           id: Number(item.id),
           daftarbl_id: Number(item.daftarbl_id) ?? '',
           containerpelayaran_id: Number(item.containerpelayaran_id) ?? '',
-          emkllain_id: Number(item.emkllain_id) ?? '',
+          emkl_id: Number(item.emkl_id) ?? '',
           tujuankapal_id: Number(item.tujuankapal_id) ?? '',
           shippinginstructiondetail_nobukti:
             item.shippinginstructiondetail_nobukti ?? '',

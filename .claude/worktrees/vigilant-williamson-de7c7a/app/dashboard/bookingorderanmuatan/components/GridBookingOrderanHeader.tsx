@@ -4250,7 +4250,7 @@ const GridBookingMuatan = () => {
           ? undefined
           : formatCurrency(rowData?.nominalstuffing)
       );
-      forms.setValue('emkllain_id', Number(rowData?.emkllain_id));
+      forms.setValue('emkl_id', Number(rowData?.emkl_id));
       forms.setValue('emkllain_nama', rowData?.emkllain_nama);
       forms.setValue('asalmuatan', rowData?.asalmuatan);
       forms.setValue('daftarbl_id', Number(rowData?.daftarbl_id));

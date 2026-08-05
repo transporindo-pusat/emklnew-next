@@ -94,7 +94,7 @@ const GridShippingInstructionDetail = () => {
     data: allDataDetail,
     isLoading,
     refetch
-  } = useGetShippingInstructionDetail(headerData?.id ?? 0, {
+  } = useGetShippingInstructionDetail(headerData?.id, {
     ...filters,
     page: 1
   });
@@ -1399,7 +1399,7 @@ const GridShippingInstructionDetail = () => {
   useEffect(() => {
     if (allDataDetail) {
       const formattedRows = allDataDetail?.data?.map((item: any) => ({
-        id: Number(item?.id),
+        id: item?.id,
         nobukti: item?.nobukti,
         shippinginstructiondetail_nobukti:
           item?.shippinginstructiondetail_nobukti,
@@ -1412,7 +1412,7 @@ const GridShippingInstructionDetail = () => {
         notifyparty: item?.notifyparty,
         statuspisahbl: item?.statuspisahbl,
         statuspisahbl_nama: item?.statuspisahbl_nama,
-        emkllain_id: item?.emkllain_id,
+        emkl_id: item?.emkl_id,
         emkllain_nama: item?.emkllain_nama,
         containerpelayaran_id: item?.containerpelayaran_id,
         containerpelayaran_nama: item?.containerpelayaran_nama,
@@ -1454,7 +1454,7 @@ const GridShippingInstructionDetail = () => {
   }, []);
 
   useEffect(() => {
-    if (headerData) {
+    if (headerData?.id) {
       refetch();
     }
   }, [headerData]);

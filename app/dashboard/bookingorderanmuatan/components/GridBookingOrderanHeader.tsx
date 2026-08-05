@@ -71,6 +71,7 @@ import {
   checkValidationBookingOrderanHeaderFn,
   getBookingOrderanMuatanByIdFn
 } from '@/lib/apis/bookingOrderanHeader.api';
+import { getParameterFn } from '@/lib/apis/parameter.api';
 import {
   bookingOrderanMuatanInput,
   bookingOrderanMuatanSchema,
@@ -226,6 +227,32 @@ const GridBookingMuatan = () => {
     resolver: zodResolver(jobPartyHeaderSchema),
     mode: 'onSubmit'
   });
+
+  useEffect(() => {
+    const ambilIdJenisOrderanMuatan = async () => {
+      try {
+        const hasil = await getParameterFn({
+          isLookUp: 'true',
+          filters: { grp: 'jenis orderan' }
+        });
+
+        const muatan = (hasil?.data ?? []).find(
+          (item: any) =>
+            String(item?.subgrp ?? '').toUpperCase() === JENISORDERMUATANNAMA
+        );
+
+        if (!muatan?.id) return;
+
+        forms.reset({
+          ...forms.getValues(),
+          jenisorder_id: String(muatan.id),
+          jenisorder_nama: JENISORDERMUATANNAMA
+        });
+      } catch {}
+    };
+
+    ambilIdJenisOrderanMuatan();
+  }, [forms]);
 
   const {
     setFocus,
@@ -4209,44 +4236,41 @@ const GridBookingMuatan = () => {
     if (selectedRow !== null && rows.length > 0 && mode !== 'add') {
       forms.setValue('nobukti', rowData.nobukti);
       forms.setValue('tglbukti', rowData.tglbukti);
-      forms.setValue(
-        'jenisorder_id',
-        Number(selectedJenisOrderan) || JENISORDERMUATAN
-      );
+      forms.setValue('jenisorder_id', String(selectedJenisOrderan ?? ''));
       forms.setValue(
         'jenisorder_nama',
         selectedJenisOrderanNama || JENISORDERMUATANNAMA
       );
-      forms.setValue('container_id', Number(rowData?.container_id));
+      forms.setValue('container_id', String(rowData?.container_id ?? ''));
       forms.setValue('container_nama', rowData?.container_nama);
-      forms.setValue('shipper_id', Number(rowData?.shipper_id));
+      forms.setValue('shipper_id', String(rowData?.shipper_id ?? ''));
       forms.setValue('shipper_nama', rowData?.shipper_nama);
-      forms.setValue('tujuankapal_id', Number(rowData?.tujuankapal_id));
+      forms.setValue('tujuankapal_id', String(rowData?.tujuankapal_id ?? ''));
       forms.setValue('tujuankapal_nama', rowData?.tujuankapal_nama);
-      forms.setValue('marketing_id', Number(rowData?.marketing_id));
+      forms.setValue('marketing_id', String(rowData?.marketing_id ?? ''));
       forms.setValue('marketing_nama', rowData?.marketing_nama);
       forms.setValue('keterangan', rowData?.keterangan);
-      forms.setValue('schedule_id', Number(rowData?.schedule_id));
+      forms.setValue('schedule_id', String(rowData?.schedule_id ?? ''));
       forms.setValue('schedule_nama', rowData?.schedule_nama);
       forms.setValue(
         'pelayarancontainer_id',
-        Number(rowData?.pelayarancontainer_id)
+        String(rowData?.pelayarancontainer_id ?? '')
       );
       forms.setValue(
         'pelayarancontainer_nama',
         rowData?.pelayarancontainer_nama
       );
-      forms.setValue('jenismuatan_id', Number(rowData?.jenismuatan_id));
+      forms.setValue('jenismuatan_id', String(rowData?.jenismuatan_id ?? ''));
       forms.setValue('jenismuatan_nama', rowData?.jenismuatan_nama);
-      forms.setValue('sandarkapal_id', Number(rowData?.sandarkapal_id));
+      forms.setValue('sandarkapal_id', String(rowData?.sandarkapal_id ?? ''));
       forms.setValue('sandarkapal_nama', rowData?.sandarkapal_nama);
-      forms.setValue('tradoluar', Number(rowData?.tradoluar));
+      forms.setValue('tradoluar', String(rowData?.tradoluar ?? ''));
       forms.setValue('tradoluar_nama', rowData?.tradoluar_nama);
       forms.setValue('nopolisi', rowData?.nopolisi);
       forms.setValue('nosp', rowData?.nosp);
       forms.setValue('nocontainer', rowData?.nocontainer);
       forms.setValue('noseal', rowData?.noseal);
-      forms.setValue('lokasistuffing', Number(rowData?.lokasistuffing));
+      forms.setValue('lokasistuffing', String(rowData?.lokasistuffing ?? ''));
       forms.setValue('lokasistuffing_nama', rowData?.lokasistuffing_nama);
       forms.setValue(
         'nominalstuffing',
@@ -4254,30 +4278,30 @@ const GridBookingMuatan = () => {
           ? undefined
           : formatCurrency(rowData?.nominalstuffing)
       );
-      forms.setValue('emkllain_id', Number(rowData?.emkllain_id));
+      forms.setValue('emkl_id', String(rowData?.emkl_id ?? ''));
       forms.setValue('emkllain_nama', rowData?.emkllain_nama);
       forms.setValue('asalmuatan', rowData?.asalmuatan);
-      forms.setValue('daftarbl_id', Number(rowData?.daftarbl_id));
+      forms.setValue('daftarbl_id', String(rowData?.daftarbl_id ?? ''));
       forms.setValue('daftarbl_nama', rowData?.daftarbl_nama);
       forms.setValue('comodity', rowData?.comodity);
       forms.setValue('gandengan', rowData?.gandengan);
-      forms.setValue('pisahbl', Number(rowData?.pisahbl));
+      forms.setValue('pisahbl', String(rowData?.pisahbl ?? ''));
       forms.setValue('pisahbl_nama', rowData?.pisahbl_nama);
-      forms.setValue('jobptd', Number(rowData?.jobptd));
+      forms.setValue('jobptd', String(rowData?.jobptd ?? ''));
       forms.setValue('jobptd_nama', rowData?.jobptd_nama);
-      forms.setValue('transit', Number(rowData?.transit));
+      forms.setValue('transit', String(rowData?.transit ?? ''));
       forms.setValue('transit_nama', rowData?.transit_nama);
-      forms.setValue('stuffingdepo', Number(rowData?.stuffingdepo));
+      forms.setValue('stuffingdepo', String(rowData?.stuffingdepo ?? ''));
       forms.setValue('stuffingdepo_nama', rowData?.stuffingdepo_nama);
-      forms.setValue('opendoor', Number(rowData?.opendoor));
+      forms.setValue('opendoor', String(rowData?.opendoor ?? ''));
       forms.setValue('opendoor_nama', rowData?.opendoor_nama);
-      forms.setValue('batalmuat', Number(rowData?.batalmuat));
+      forms.setValue('batalmuat', String(rowData?.batalmuat ?? ''));
       forms.setValue('batalmuat_nama', rowData?.batalmuat_nama);
-      forms.setValue('soc', Number(rowData?.soc));
+      forms.setValue('soc', String(rowData?.soc ?? ''));
       forms.setValue('soc_nama', rowData?.soc_nama);
       forms.setValue(
         'pengurusandoorekspedisilain',
-        Number(rowData?.pengurusandoor)
+        String(rowData?.pengurusandoor ?? '')
       );
       forms.setValue(
         'pengurusandoorekspedisilain_nama',
@@ -4285,10 +4309,6 @@ const GridBookingMuatan = () => {
       );
     } else {
       forms.setValue('nobukti', '');
-      forms.setValue(
-        'jenisorder_id',
-        Number(selectedJenisOrderan) || JENISORDERMUATAN
-      );
       forms.setValue(
         'jenisorder_nama',
         selectedJenisOrderanNama || JENISORDERMUATANNAMA

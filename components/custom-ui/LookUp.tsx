@@ -2162,6 +2162,10 @@ export default function LookUp({
                         onPaste={(e) =>
                           handlePaste(e.clipboardData.getData('text'))
                         }
+                        // Token tema, sama dengan cabang non-FormControl di
+                        // bawah. Versi lama memakai text-zinc-900 + border-zinc-300
+                        // yang dipatok terang, jadi begitu field ada isinya
+                        // teksnya hitam di atas background gelap (tak terbaca).
                         className={`w-full rounded-r-none text-sm text-input-text lg:w-[100%] rounded-none${
                           showOnButton && !forInput
                             ? 'rounded-r-none border-r-0'
@@ -2208,6 +2212,10 @@ export default function LookUp({
                       ) : null}
 
                       {showOnButton && !forInput ? (
+                        // Kelas HARUS pakai token tema, sama dengan cabang
+                        // non-FormControl di bawah. Versi lama memakai warna
+                        // biru-muda yang dipatok (#e0ecff dkk) sehingga tombolnya
+                        // menyala putih di dark mode.
                         <Button
                           type="button"
                           variant="outline"

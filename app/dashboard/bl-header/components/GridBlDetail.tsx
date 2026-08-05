@@ -1260,7 +1260,7 @@ const GridBlDetail = () => {
         shipper: item?.shipper,
         comodity: item?.comodity,
         notifyparty: item?.notifyparty,
-        emkllain_id: item?.emkllain_id,
+        emkl_id: item?.emkl_id,
         emkllain_nama: item?.emkllain_nama,
         pelayaran_nama: item?.pelayaran_nama,
         statuspisahbl_nama: item?.statuspisahbl_nama,

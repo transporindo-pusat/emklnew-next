@@ -306,6 +306,7 @@ const GridScheduleHeader = () => {
       return updated;
     });
   };
+  console.log('dum', forms.getValues());
 
   const handleSelectAll = () => {
     if (isAllSelected) {

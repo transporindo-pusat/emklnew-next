@@ -1412,7 +1412,7 @@ const GridShippingInstructionDetail = () => {
         notifyparty: item?.notifyparty,
         statuspisahbl: item?.statuspisahbl,
         statuspisahbl_nama: item?.statuspisahbl_nama,
-        emkllain_id: item?.emkllain_id,
+        emkl_id: item?.emkl_id,
         emkllain_nama: item?.emkllain_nama,
         containerpelayaran_id: item?.containerpelayaran_id,
         containerpelayaran_nama: item?.containerpelayaran_nama,

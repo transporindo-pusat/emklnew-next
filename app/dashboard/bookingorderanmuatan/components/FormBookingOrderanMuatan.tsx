@@ -618,8 +618,13 @@ const FormBookingMuatan = ({
                             {...props}
                             disabled={true}
                             lookupValue={(value: any) => {
-                              forms.setValue('jenisorder_id', Number(value));
+                              forms.setValue(
+                                'jenisorder_id',
+                                String(value ?? '')
+                              );
                             }}
+                            name="jenisorder_id"
+                            forms={forms}
                             lookupNama={JENISORDERMUATANNAMA}
                           />
                         ))}
@@ -641,7 +646,10 @@ const FormBookingMuatan = ({
                             key={index}
                             {...props}
                             lookupValue={(value: any) => {
-                              forms.setValue('container_id', Number(value));
+                              forms.setValue(
+                                'container_id',
+                                String(value ?? '')
+                              );
                             }}
                             onSelectRow={(val) => {
                               forms.setValue('container_nama', val?.nama);
@@ -672,7 +680,7 @@ const FormBookingMuatan = ({
                             key={index}
                             {...props}
                             lookupValue={(value: any) => {
-                              forms.setValue('shipper_id', Number(value));
+                              forms.setValue('shipper_id', String(value ?? ''));
                             }}
                             onSelectRow={(val) => {
                               forms.setValue('shipper_nama', val?.nama);
@@ -703,7 +711,10 @@ const FormBookingMuatan = ({
                             key={index}
                             {...props}
                             lookupValue={(value: any) => {
-                              forms.setValue('tujuankapal_id', Number(value));
+                              forms.setValue(
+                                'tujuankapal_id',
+                                String(value ?? '')
+                              );
                             }}
                             onSelectRow={(val) => {
                               forms.setValue('tujuankapal_nama', val?.nama);
@@ -734,7 +745,10 @@ const FormBookingMuatan = ({
                             key={index}
                             {...props}
                             lookupValue={(value: any) => {
-                              forms.setValue('marketing_id', Number(value));
+                              forms.setValue(
+                                'marketing_id',
+                                String(value ?? '')
+                              );
                             }}
                             onSelectRow={(val) => {
                               forms.setValue('marketing_nama', val?.nama);
@@ -788,7 +802,10 @@ const FormBookingMuatan = ({
                             key={index}
                             {...props}
                             lookupValue={(value: any) => {
-                              forms.setValue('schedule_id', Number(value));
+                              forms.setValue(
+                                'schedule_id',
+                                String(value ?? '')
+                              );
                             }}
                             onSelectRow={(val) => {
                               setReloadInformation(true);
@@ -875,7 +892,7 @@ const FormBookingMuatan = ({
                             lookupValue={(value: any) => {
                               forms.setValue(
                                 'pelayarancontainer_id',
-                                Number(value)
+                                String(value ?? '')
                               );
                             }}
                             onSelectRow={(val) => {
@@ -912,7 +929,10 @@ const FormBookingMuatan = ({
                             key={index}
                             {...props}
                             lookupValue={(value: any) => {
-                              forms.setValue('jenismuatan_id', Number(value));
+                              forms.setValue(
+                                'jenismuatan_id',
+                                String(value ?? '')
+                              );
                             }}
                             onSelectRow={(val) => {
                               forms.setValue('jenismuatan_nama', val?.nama);
@@ -943,7 +963,10 @@ const FormBookingMuatan = ({
                             key={index}
                             {...props}
                             lookupValue={(value: any) => {
-                              forms.setValue('sandarkapal_id', Number(value));
+                              forms.setValue(
+                                'sandarkapal_id',
+                                String(value ?? '')
+                              );
                             }}
                             onSelectRow={(val) => {
                               forms.setValue('sandarkapal_nama', val?.nama);
@@ -971,7 +994,7 @@ const FormBookingMuatan = ({
                             key={index}
                             {...props}
                             lookupValue={(value: any) => {
-                              forms.setValue('tradoluar', Number(value));
+                              forms.setValue('tradoluar', String(value ?? ''));
                             }}
                             onSelectRow={(val) => {
                               forms.setValue('tradoluar_nama', val?.text);
@@ -1182,7 +1205,10 @@ const FormBookingMuatan = ({
                             key={index}
                             {...props}
                             lookupValue={(value: any) => {
-                              forms.setValue('lokasistuffing', Number(value));
+                              forms.setValue(
+                                'lokasistuffing',
+                                String(value ?? '')
+                              );
                             }}
                             onSelectRow={(val) => {
                               forms.setValue(
@@ -1237,7 +1263,7 @@ const FormBookingMuatan = ({
                             key={index}
                             {...props}
                             lookupValue={(value: any) => {
-                              forms.setValue('emkllain_id', Number(value));
+                              forms.setValue('emkl_id', String(value ?? ''));
                             }}
                             onSelectRow={(val) => {
                               forms.setValue('emkllain_nama', val?.nama);
@@ -1245,7 +1271,7 @@ const FormBookingMuatan = ({
                             onClear={() => {
                               forms.setValue('emkllain_nama', '');
                             }}
-                            name="emkllain_id"
+                            name="emkl_id"
                             forms={forms}
                             lookupNama={forms.getValues('emkllain_nama')}
                           />
@@ -1288,7 +1314,10 @@ const FormBookingMuatan = ({
                             key={index}
                             {...props}
                             lookupValue={(value: any) => {
-                              forms.setValue('daftarbl_id', Number(value));
+                              forms.setValue(
+                                'daftarbl_id',
+                                String(value ?? '')
+                              );
                             }}
                             onSelectRow={(val) => {
                               forms.setValue('daftarbl_nama', val?.nama);
@@ -1339,7 +1368,7 @@ const FormBookingMuatan = ({
                             key={index}
                             {...props}
                             lookupValue={(value: any) => {
-                              forms.setValue('pisahbl', Number(value));
+                              forms.setValue('pisahbl', String(value ?? ''));
                             }}
                             onSelectRow={(val) => {
                               forms.setValue('pisahbl_nama', val?.text);
@@ -1367,7 +1396,7 @@ const FormBookingMuatan = ({
                             key={index}
                             {...props}
                             lookupValue={(value: any) => {
-                              forms.setValue('jobptd', Number(value));
+                              forms.setValue('jobptd', String(value ?? ''));
                             }}
                             onSelectRow={(val) => {
                               forms.setValue('jobptd_nama', val?.text);
@@ -1395,7 +1424,7 @@ const FormBookingMuatan = ({
                             key={index}
                             {...props}
                             lookupValue={(value: any) => {
-                              forms.setValue('transit', Number(value));
+                              forms.setValue('transit', String(value ?? ''));
                             }}
                             onSelectRow={(val) => {
                               forms.setValue('transit_nama', val?.text);
@@ -1423,7 +1452,10 @@ const FormBookingMuatan = ({
                             key={index}
                             {...props}
                             lookupValue={(value: any) => {
-                              forms.setValue('stuffingdepo', Number(value));
+                              forms.setValue(
+                                'stuffingdepo',
+                                String(value ?? '')
+                              );
                             }}
                             onSelectRow={(val) => {
                               forms.setValue('stuffingdepo_nama', val?.text);
@@ -1451,7 +1483,7 @@ const FormBookingMuatan = ({
                             key={index}
                             {...props}
                             lookupValue={(value: any) => {
-                              forms.setValue('opendoor', Number(value));
+                              forms.setValue('opendoor', String(value ?? ''));
                             }}
                             onSelectRow={(val) => {
                               forms.setValue('opendoor_nama', val?.text);
@@ -1479,7 +1511,7 @@ const FormBookingMuatan = ({
                             key={index}
                             {...props}
                             lookupValue={(value: any) => {
-                              forms.setValue('batalmuat', Number(value));
+                              forms.setValue('batalmuat', String(value ?? ''));
                             }}
                             onSelectRow={(val) => {
                               forms.setValue('batalmuat_nama', val?.text);
@@ -1507,7 +1539,7 @@ const FormBookingMuatan = ({
                             key={index}
                             {...props}
                             lookupValue={(value: any) => {
-                              forms.setValue('soc', Number(value));
+                              forms.setValue('soc', String(value ?? ''));
                             }}
                             onSelectRow={(val) => {
                               forms.setValue('soc_nama', val?.text);
@@ -1537,7 +1569,7 @@ const FormBookingMuatan = ({
                             lookupValue={(value: any) => {
                               forms.setValue(
                                 'pengurusandoorekspedisilain',
-                                Number(value)
+                                String(value ?? '')
                               );
                             }}
                             onSelectRow={(val) => {

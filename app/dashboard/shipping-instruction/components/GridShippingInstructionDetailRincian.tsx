@@ -92,7 +92,7 @@ const GridShippingInstructionDetailRincian = () => {
     data: allDataRincian,
     isLoading,
     refetch
-  } = useGetShippingInstructionDetailRincian(detailData?.id ?? 0, {
+  } = useGetShippingInstructionDetailRincian(detailData?.id, {
     ...filters,
     page: 1
   });
@@ -734,11 +734,11 @@ const GridShippingInstructionDetailRincian = () => {
   useEffect(() => {
     if (allDataRincian) {
       const formattedRows = allDataRincian?.data?.map((item: any) => ({
-        id: Number(item.id),
+        id: item.id,
         nobukti: item.nobukti,
         shippinginstructiondetail_nobukti:
           item.shippinginstructiondetail_nobukti,
-        shippinginstructiondetail_id: item.shippinginstruction_id,
+        shippinginstructiondetail_id: item.shippinginstructiondetail_id,
         orderanmuatan_nobukti: item.orderanmuatan_nobukti,
         comodity: item.comodity,
         keterangan: item.keterangan
@@ -758,7 +758,7 @@ const GridShippingInstructionDetailRincian = () => {
   }, []);
 
   useEffect(() => {
-    if (detailData) {
+    if (detailData?.id) {
       refetch();
       setSelectedRow(0);
     }

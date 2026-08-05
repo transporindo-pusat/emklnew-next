@@ -36,7 +36,7 @@ export const shippingInstructionDetailSchema = z.object({
     })
     .min(1, { message: dynamicRequiredMessage('CONTAINER PELAYARAN') }),
 
-  emkllain_id: z
+  emkl_id: z
     .number({
       required_error: dynamicRequiredMessage('EMKL LAIN')
     })

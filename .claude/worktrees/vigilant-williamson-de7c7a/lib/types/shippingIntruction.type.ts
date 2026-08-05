@@ -31,7 +31,7 @@ export interface ShippingInstructionDetail {
   notifyparty: string;
   statuspisahbl: string;
   statuspisahbl_nama: string;
-  emkllain_id: number;
+  emkl_id: number;
   emkllain_nama: string;
   containerpelayaran_id: number;
   containerpelayaran_nama: string;
