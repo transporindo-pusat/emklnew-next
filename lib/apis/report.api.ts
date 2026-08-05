@@ -26,6 +26,14 @@ export const generateGroupbiayaextraReportFn = async (
   return response.data;
 };
 
+/** Cetak laporan User di background — lihat generateGroupbiayaextraReportFn. */
+export const generateUserReportFn = async (
+  payload: ReportJobPayload
+): Promise<ReportJobResponse> => {
+  const response = await api2.post('/user/report', payload);
+  return response.data;
+};
+
 export const generateAsuransiReportFn = async (
   payload: ReportJobPayload
 ): Promise<ReportJobResponse> => {
@@ -71,6 +79,14 @@ export const generateGroupbiayaextraExportFn = async (
   payload: ExportJobPayload
 ): Promise<ReportJobResponse> => {
   const response = await api2.post('/groupbiayaextra/export', payload);
+  return response.data;
+};
+
+/** Export Excel User di background — lihat generateAlatbayarExportFn. */
+export const generateUserExportFn = async (
+  payload: ExportJobPayload
+): Promise<ReportJobResponse> => {
+  const response = await api2.post('/user/export', payload);
   return response.data;
 };
 

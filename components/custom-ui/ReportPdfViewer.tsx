@@ -63,12 +63,6 @@ function ReportPdfViewerContent({
     url
   );
 
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
-    }
-  }, []);
-
   return (
     <>
       <style jsx global>{`
@@ -197,7 +191,9 @@ function ReportPdfViewerContent({
           />
 
           {url ? (
-            <Worker workerUrl="/pdf.worker.min.js">
+            <Worker
+              workerUrl={`https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`}
+            >
               <Viewer
                 fileUrl={url}
                 defaultScale={1}
