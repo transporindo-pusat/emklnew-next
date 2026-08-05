@@ -18,6 +18,7 @@ import { IoMdClose } from 'react-icons/io';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import CustomPrintModal from '@/components/custom-ui/CustomPrint';
 import { HeaderPdfViewer } from '@/components/custom-ui/HeaderPdfViewer';
+import * as pdfjs from 'pdfjs-dist/package.json';
 
 interface ReportPdfViewerProps {
   isOpen: boolean;

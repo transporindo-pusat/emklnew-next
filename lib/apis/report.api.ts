@@ -138,6 +138,22 @@ export const generateBiayaExtraHeaderExportFn = async (
   return response.data;
 };
 
+/** Export Excel Harga Trucking di background — lihat generateAlatbayarExportFn. */
+export const generateHargatruckingExportFn = async (
+  payload: ExportJobPayload
+): Promise<ReportJobResponse> => {
+  const response = await api2.post('/hargatrucking/export', payload);
+  return response.data;
+};
+
+/** Export Excel Asuransi di background — lihat generateAlatbayarExportFn. */
+export const generateAsuransiExportFn = async (
+  payload: ExportJobPayload
+): Promise<ReportJobResponse> => {
+  const response = await api2.post('/asuransi/export', payload);
+  return response.data;
+};
+
 export const PDF_MIME = 'application/pdf';
 export const EXCEL_MIME =
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
