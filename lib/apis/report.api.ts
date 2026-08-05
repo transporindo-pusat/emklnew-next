@@ -53,6 +53,30 @@ export const generateTypeAkuntansiReportFn = async (
   return response.data;
 };
 
+/**
+ * Payload cetak BUKTI (satu transaksi), bukan laporan daftar: yang menentukan
+ * isinya adalah id baris yang dipilih di grid, bukan filter kolom / search.
+ */
+export interface BuktiJobPayload {
+  /** Nama file template .mrt yang ada di folder `reports` milik backend. */
+  mrtName: string;
+  /** id baris yang dicetak. */
+  id: string;
+  judullaporan?: string;
+}
+
+/**
+ * Cetak bukti Hutang di background — alurnya sama dengan laporan daftar
+ * (balas jobId, progres lewat socket `/report`), hanya datanya satu bukti
+ * beserta rinciannya sesuai dua datasource di LaporanHutang.mrt.
+ */
+export const generateHutangReportFn = async (
+  payload: BuktiJobPayload
+): Promise<ReportJobResponse> => {
+  const response = await api2.post('/hutangheader/report', payload);
+  return response.data;
+};
+
 /** Payload export Excel background — sama seperti report, tanpa template .mrt. */
 export interface ExportJobPayload {
   search?: string;
@@ -95,6 +119,14 @@ export const generateMenuExportFn = async (
   payload: ExportJobPayload
 ): Promise<ReportJobResponse> => {
   const response = await api2.post('/menu/export', payload);
+  return response.data;
+};
+
+/** Export Excel daftar Hutang di background — lihat generateAlatbayarExportFn. */
+export const generateHutangExportFn = async (
+  payload: ExportJobPayload
+): Promise<ReportJobResponse> => {
+  const response = await api2.post('/hutangheader/export', payload);
   return response.data;
 };
 
