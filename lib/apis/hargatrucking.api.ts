@@ -2,11 +2,11 @@ import { GetParams } from '../types/all.type';
 import { IAllHargatrucking, IHargatrucking } from '../types/hargatrucking.type';
 import { buildQueryParams } from '../utils';
 import { api, api2 } from '../utils/AxiosInstance';
-import { hargatruckingInput } from '../validations/hargatrucking.validation';
+import { HargatruckingInput } from '../validations/hargatrucking.validation';
 
 interface UpdateMenuParams {
   id: string;
-  fields: hargatruckingInput;
+  fields: HargatruckingInput;
 }
 
 export const getHargatruckingFn = async (
@@ -15,7 +15,6 @@ export const getHargatruckingFn = async (
 ): Promise<IAllHargatrucking> => {
   try {
     const queryParams = buildQueryParams(filters);
-
     const response = await api2.get('/hargatrucking', {
       params: queryParams,
       signal
@@ -26,18 +25,13 @@ export const getHargatruckingFn = async (
     if (signal?.aborted) {
       throw new Error('Request was cancelled');
     }
-    console.error('Error fetching Akun Pusat:', error);
-    throw new Error('Failed to fetch Akun Pusat');
+    console.error('Error fetching Harga Trucking:', error);
+    throw new Error('Failed to fetch Harga Trucking');
   }
 };
 export const deleteHargatruckingFn = async (id: string) => {
-  try {
-    const response = await api2.delete(`/hargatrucking/${id}`);
-    return response.data; // Optionally return response data if needed
-  } catch (error) {
-    console.error('Error deleting order:', error);
-    throw error; // Re-throw the error if you want to handle it in the calling function
-  }
+  const response = await api2.delete(`/hargatrucking/${id}`);
+  return response.data;
 };
 export const updateHargatruckingFn = async ({
   id,
@@ -46,13 +40,10 @@ export const updateHargatruckingFn = async ({
   const response = await api2.put(`/hargatrucking/update/${id}`, fields);
   return response.data;
 };
-
-export const storeHargatruckingFn = async (fields: hargatruckingInput) => {
+export const storeHargatruckingFn = async (fields: HargatruckingInput) => {
   const response = await api2.post(`/hargatrucking`, fields);
-
   return response.data;
 };
-
 export const exportHargatruckingFn = async (filters: any): Promise<any> => {
   try {
     const queryParams = buildQueryParams(filters);
