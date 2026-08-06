@@ -12,7 +12,6 @@ import '@react-pdf-viewer/print/lib/styles/index.css';
 import { zoomPlugin } from '@react-pdf-viewer/zoom';
 // @ts-expect-error CSS side-effect import
 import '@react-pdf-viewer/zoom/lib/styles/index.css';
-import * as pdfjs from 'pdfjs-dist/package.json';
 
 import { IoMdClose } from 'react-icons/io';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
