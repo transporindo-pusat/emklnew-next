@@ -101,7 +101,10 @@ import { getAsuransiFn, exportAsuransiFn } from '@/lib/apis/asuransi.api';
 import { useReportProgress } from '@/components/custom-ui/ReportProgressProvider';
 import { loadStimulsoftScript } from '@/lib/loadStimulsoft';
 import { setReportData } from '@/lib/store/reportSlice/reportSlice';
-import { generateAsuransiReportFn } from '@/lib/apis/report.api';
+import {
+  generateAsuransiExportFn,
+  generateAsuransiReportFn
+} from '@/lib/apis/report.api';
 import { useReportPdfContext } from '@/hooks/ReportPdfProvider';
 
 interface Filter {
@@ -182,6 +185,7 @@ const GridAsuransi = () => {
   const suppressScrollRef = useRef(false);
   const isPageTransitionRef = useRef(false);
   const { start } = useReportProgress();
+  const { generateExport } = useReportPdfContext();
 
   const lastScrollTopRef = useRef<number>(0);
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -3101,7 +3105,6 @@ const GridAsuransi = () => {
       materai2: '',
       materai3: '',
       statusaktif: '',
-      text: '',
       info: ''
     });
   };
@@ -3449,22 +3452,26 @@ const GridAsuransi = () => {
   //   }
   // };
 
-  const handleExportExcel = async (exportFilters: any) => {
-    try {
-      const response = await exportAsuransiFn({ ...exportFilters });
+  /**
+   * Export Excel dijalankan di BACKEND (background job + socket), sama seperti
+   * alur cetak laporan. Frontend hanya mengirim filter yang sedang aktif di
+   * grid — filter kolom, search global, dan sort — lalu progresnya muncul di
+   * toast. Setelah selesai, toast menampilkan tombol Download untuk menyimpan
+   * file xlsx-nya.
+   */
+  const handleExportExcel = async () => {
+    const { page, limit, ...filtersWithoutLimit } = filters;
 
-      const url = window.URL.createObjectURL(new Blob([response]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `laporan_asuransi_${Date.now()}.xlsx`;
-      document.body.appendChild(link);
-      link.click();
-
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(link);
-    } catch (error) {
-      console.error('Error exporting asuransi data:', error);
-    }
+    await generateExport({
+      label: 'Export Asuransi',
+      payload: {
+        search: filtersWithoutLimit.search,
+        filters: filtersWithoutLimit.filters,
+        sortBy: filtersWithoutLimit.sortBy,
+        sortDirection: filtersWithoutLimit.sortDirection
+      },
+      apiFn: generateAsuransiExportFn
+    });
   };
 
   document.querySelectorAll('.column-headers').forEach((element) => {
@@ -4215,6 +4222,12 @@ const GridAsuransi = () => {
                 shortcut: 'P',
                 onClick: () => handleReport(),
                 className: 'bg-cyan-500 hover:bg-cyan-700'
+              },
+              {
+                label: 'Export',
+                icon: <FaFileExport />,
+                onClick: () => handleExportExcel(),
+                className: 'bg-green-600 hover:bg-green-700'
               }
             ]}
           />
