@@ -91,8 +91,9 @@ export const useDeleteHargatrucking = () => {
       // });
     },
     onError: (error: AxiosError) => {
-      const errorResponse = error.response?.data as IErrorResponse;
+      const errorResponse = error.response as IErrorResponse;
 
+      console.log('errorResponse', errorResponse);
       if (errorResponse !== undefined) {
         // Menangani error berdasarkan path
         const errorFields = errorResponse.message || [];
@@ -105,11 +106,12 @@ export const useDeleteHargatrucking = () => {
             setError(path, err.message); // Update error di context
           });
         } else {
-          alert({
-            title: errorResponse.message ?? 'Gagal',
-            variant: 'danger',
-            submitText: 'OK'
-          });
+          alert(errorResponse.message ?? 'Gagal');
+          // alert({
+          //   title: errorResponse.message ?? 'Gagal',
+          //   variant: 'danger',
+          //   submitText: 'OK'
+          // });
         }
       }
     }

@@ -3373,7 +3373,7 @@ const GridAsuransi = () => {
       apiFn: generateAsuransiReportFn,
       // Tombol Export di toolbar viewer — memakai filter yang sama dengan
       // laporan yang sedang dibuka (sama seperti di halaman /reports/*).
-      onExport: () => handleExportExcel(filtersWithoutLimit)
+      onExport: () => handleExportExcel()
     });
   };
 

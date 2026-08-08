@@ -59,6 +59,17 @@ export const generateHutangReportFn = async (
   const response = await api2.post('/hutangheader/report', payload);
   return response.data;
 };
+/**
+ * Cetak Harga trucking di background — alurnya sama dengan laporan daftar
+ * (balas jobId, progres lewat socket `/report`), hanya datanya satu bukti
+ * beserta rinciannya sesuai dua datasource di LaporanHutang.mrt.
+ */
+export const generateHargatruckingReportFn = async (
+  payload: BuktiJobPayload
+): Promise<ReportJobResponse> => {
+  const response = await api2.post('/hargatrucking/report', payload);
+  return response.data;
+};
 
 /** Payload export Excel background — sama seperti report, tanpa template .mrt. */
 export interface ExportJobPayload {
